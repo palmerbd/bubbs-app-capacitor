@@ -1,0 +1,13 @@
+{
+  "appId": "com.abilenewebsitedesign.bubbs",
+  "appName": "Bubbs-Talks",
+  "webDir": "www",
+  "ios": {
+    "scheme": "Bubbs-Talks",
+    "contentInset": "always",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "server": {
+    "iosScheme": "bubbs"
+  }
+}

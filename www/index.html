@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Talk" />
+<meta name="theme-color" content="#1a1a2e" />
+<title>Talk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%A8%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #1a1a2e; color: #fff;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none; touch-action: manipulation;
+  }
+  #app {
+    display: flex; flex-direction: column;
+    height: 100vh; height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ============ MESSAGE BAR ============ */
+  #message-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: #0f3460; padding: 10px 12px;
+    min-height: 96px;
+    border-bottom: 3px solid #16213e;
+  }
+  #message-strip {
+    flex: 1; display: flex; gap: 6px;
+    overflow-x: auto; overflow-y: hidden;
+    padding: 4px; min-height: 76px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #message-strip::-webkit-scrollbar { display: none; }
+  #message-strip:empty::before {
+    content: "Tap to say something";
+    color: rgba(255,255,255,0.35);
+    align-self: center; margin-left: 12px;
+    font-size: 18px; font-style: italic;
+  }
+  .msg-tile {
+    flex: 0 0 auto;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    width: 70px; height: 68px;
+    border-radius: 10px;
+    background: #fff; color: #000;
+    font-size: 13px; font-weight: 700;
+    text-align: center; padding: 4px;
+    line-height: 1.1;
+    border: 2px solid rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+  .msg-tile .emoji { font-size: 26px; line-height: 1; }
+  .msg-tile .label { margin-top: 2px; }
+  .msg-tile .msg-photo {
+    width: 40px; height: 40px;
+    object-fit: cover; border-radius: 6px;
+    margin-bottom: 2px;
+  }
+
+  .bar-btn {
+    flex: 0 0 auto; width: 72px; height: 72px;
+    border: none; border-radius: 14px;
+    font-size: 32px; color: #fff; font-weight: 800;
+    background: #e94560;
+    cursor: pointer;
+    transition: transform 0.08s ease;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+  }
+  .bar-btn:active { transform: scale(0.94); }
+  #speak-btn { background: #2ecc71; font-size: 36px; }
+  #clear-btn { background: #555e80; }
+
+  /* ============ BODY (rail + grid) ============ */
+  #body { flex: 1; display: flex; overflow: hidden; background: #16213e; }
+
+  #rail {
+    flex: 0 0 22%; min-width: 140px; max-width: 220px;
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 10px; background: #1f2544;
+    border-right: 3px solid #0f3460;
+  }
+  .rail-primary {
+    flex: 1 1 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: 16px;
+    border: 4px solid #fbc02d;
+    background: #fff59d; color: #111;
+    font-weight: 900;
+    font-size: clamp(20px, 3.2vmin, 30px);
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.25);
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    padding: 10px; text-align: center;
+    overflow: hidden;
+  }
+  .rail-primary:active { transform: scale(0.96); box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+  .rail-primary .rail-emoji {
+    font-size: clamp(44px, 9vmin, 84px);
+    line-height: 1; margin-bottom: 6px;
+  }
+  .rail-primary .rail-photo {
+    width: clamp(56px, 11vmin, 100px);
+    height: clamp(56px, 11vmin, 100px);
+    object-fit: cover; border-radius: 14px;
+    margin-bottom: 6px;
+  }
+  #btn-want { border-color: #388e3c; background: #c8e6c9; }
+
+  .rail-secondary-row { display: flex; gap: 6px; }
+  .rail-secondary {
+    flex: 1; min-height: 60px;
+    border: 3px solid transparent;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: clamp(14px, 2.2vmin, 20px);
+    cursor: pointer;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 4px; color: #111;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+  }
+  .rail-secondary:active { transform: scale(0.94); }
+  .rail-secondary .sec-emoji { font-size: clamp(20px, 3.5vmin, 28px); }
+  #btn-yes  { background: #f8bbd0; border-color: #d81b60; }
+  #btn-no   { background: #ffcdd2; border-color: #c62828; }
+  #btn-help { background: #bbdefb; border-color: #1976d2; }
+
+  #grid-wrap { flex: 1; overflow: hidden; position: relative; }
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 8px; padding: 10px;
+    height: 100%; width: 100%;
+  }
+  .tile {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: 14px;
+    background: #fff; color: #111;
+    font-weight: 800; text-align: center;
+    border: 4px solid transparent; padding: 6px;
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.25);
+    min-height: 0; min-width: 0;
+    overflow: hidden;
+  }
+  .tile:active { transform: scale(0.95); box-shadow: 0 1px 0 rgba(0,0,0,0.25); }
+  .tile .tile-emoji {
+    font-size: clamp(32px, 8vmin, 72px);
+    line-height: 1; margin-bottom: 4px;
+  }
+  .tile .tile-photo {
+    width: clamp(60px, 13vmin, 140px);
+    height: clamp(60px, 13vmin, 140px);
+    object-fit: cover; border-radius: 10px;
+    margin-bottom: 4px;
+  }
+  .tile .tile-label {
+    font-size: clamp(14px, 2.6vmin, 24px);
+    line-height: 1.1; word-break: break-word;
+  }
+
+  .color-noun    { background: #ffe0b2; border-color: #f57c00; }
+  .color-pronoun { background: #fff59d; border-color: #fbc02d; }
+  .color-desc    { background: #bbdefb; border-color: #1976d2; }
+  .color-verb    { background: #c8e6c9; border-color: #388e3c; }
+
+  /* ============ TABS ============ */
+  #tabs {
+    display: flex; gap: 6px;
+    padding: 8px 10px;
+    background: #0f3460;
+    border-top: 3px solid #16213e;
+  }
+  .tab {
+    flex: 1; min-height: 64px;
+    border: 3px solid transparent;
+    border-radius: 12px;
+    background: #1f4068; color: #fff;
+    font-weight: 800;
+    font-size: clamp(14px, 2vmin, 20px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px; cursor: pointer;
+    padding: 6px 10px;
+  }
+  .tab .tab-emoji { font-size: clamp(20px, 3vmin, 30px); }
+  .tab.active { background: #fff; color: #0f3460; border-color: #e94560; }
+
+  /* ============ CAREGIVER LOCK + PANEL ============ */
+  #lock-btn {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 6px);
+    right: 6px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.35);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    cursor: pointer; border: none;
+    z-index: 5;
+    transition: background 0.2s ease;
+  }
+  #lock-btn.pressing { background: #e94560; color: #fff; }
+
+  .panel {
+    position: fixed; inset: 0;
+    background: rgba(10,10,20,0.96);
+    z-index: 10; display: none;
+    flex-direction: column;
+    padding: 24px;
+    padding-top: calc(env(safe-area-inset-top) + 24px);
+    color: #fff;
+    overflow-y: auto;
+  }
+  .panel.open { display: flex; }
+
+  #caregiver-panel h2 { margin: 0 0 4px 0; font-size: 26px; }
+  #caregiver-panel .sub {
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 18px;
+    font-size: 14px;
+  }
+  #caregiver-panel h3 {
+    margin: 20px 0 6px 0;
+    font-size: 17px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .cg-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    gap: 16px;
+  }
+  .cg-row label { font-size: 16px; flex: 1; }
+  .cg-row select,
+  .cg-row input[type="text"],
+  .cg-row input[type="tel"],
+  .cg-row input[type="range"] {
+    font-size: 16px; padding: 8px 10px;
+    border-radius: 8px;
+    background: #1f4068; color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    max-width: 55%; min-width: 160px;
+  }
+  .toggle {
+    width: 56px; height: 32px;
+    border-radius: 999px;
+    background: #333;
+    position: relative;
+    transition: background 0.2s ease;
+    cursor: pointer; flex: 0 0 auto;
+  }
+  .toggle::after {
+    content: ""; position: absolute;
+    top: 3px; left: 3px;
+    width: 26px; height: 26px;
+    background: #fff; border-radius: 50%;
+    transition: transform 0.2s ease;
+  }
+  .toggle.on { background: #2ecc71; }
+  .toggle.on::after { transform: translateX(24px); }
+
+  .cg-cat-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .cg-cat-btn {
+    padding: 16px 14px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    background: #1f4068;
+    color: #fff;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    justify-content: flex-start;
+  }
+  .cg-cat-btn:active { background: #2a5288; }
+  .cg-cat-btn .cat-emoji { font-size: 28px; }
+
+  #close-cg {
+    margin-top: 24px;
+    padding: 16px;
+    border: none; border-radius: 12px;
+    background: #e94560; color: #fff;
+    font-size: 18px; font-weight: 800;
+    cursor: pointer;
+  }
+  .cg-hint {
+    margin-top: 16px; padding: 12px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    font-size: 13px; color: rgba(255,255,255,0.7);
+    line-height: 1.5;
+  }
+
+  /* ============ EDITOR PANEL ============ */
+  #editor-panel { z-index: 20; background: rgba(5,10,22,0.98); }
+  .editor-header {
+    display: flex; align-items: center;
+    gap: 12px; margin-bottom: 16px;
+  }
+  .editor-header h2 { margin: 0; font-size: 22px; }
+  .editor-back {
+    border: none; background: #e94560;
+    color: #fff; font-weight: 800;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  #editor-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .item-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+  }
+  .item-img-slot {
+    flex: 0 0 auto;
+    width: 64px; height: 64px;
+    border-radius: 10px;
+    background: #fff; color: #000;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    position: relative;
+    border: 2px solid rgba(255,255,255,0.3);
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .item-img-slot img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .item-img-slot::after {
+    content: "📷";
+    position: absolute;
+    right: -6px; bottom: -6px;
+    background: #e94560;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid #050a16;
+  }
+  .item-word-input {
+    flex: 1;
+    font-size: 16px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #1f4068;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    min-width: 0;
+  }
+  .item-speak-input {
+    flex: 1;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #182e4d;
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.1);
+    min-width: 0;
+    font-style: italic;
+  }
+  .item-input-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .item-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+  .item-btn {
+    width: 38px; height: 38px;
+    border: none;
+    border-radius: 8px;
+    background: #2a3660;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  .item-btn:active { background: #3a4880; }
+  .item-btn.danger { background: #6a1e2e; }
+  .item-btn.danger:active { background: #881f36; }
+
+  .editor-actions {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 20px;
+  }
+  .editor-actions button {
+    padding: 14px;
+    border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer;
+  }
+  #editor-add { background: #2ecc71; color: #fff; }
+  #editor-reset { background: #555e80; color: #fff; }
+  #editor-done { background: #e94560; color: #fff; }
+
+  .editor-hint {
+    margin-top: 14px;
+    padding: 10px 12px;
+    background: rgba(46,204,113,0.08);
+    border: 1px solid rgba(46,204,113,0.2);
+    border-radius: 10px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.5;
+  }
+
+  /* ============ IMAGE-CHOICE SHEET ============ */
+  #image-sheet {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 40;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #image-sheet.open { display: flex; }
+  #image-sheet .sheet-card {
+    background: #0f1d3a;
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%; max-width: 360px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+  }
+  #image-sheet h3 { margin: 0 0 6px; font-size: 18px; }
+  #image-sheet button {
+    padding: 14px;
+    border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    padding-left: 18px;
+  }
+  #image-sheet .sheet-photo  { background: #2ecc71; color: #fff; }
+  #image-sheet .sheet-emoji  { background: #1f4068; color: #fff; }
+  #image-sheet .sheet-clear  { background: #555e80; color: #fff; }
+  #image-sheet .sheet-cancel { background: transparent; color: rgba(255,255,255,0.6); text-align: center; padding-left: 14px; }
+
+  /* ============ TOAST ============ */
+  #parent-toast {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 16px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-200%);
+    background: #0b1d3a; color: #fff;
+    border: 2px solid #2ecc71;
+    border-radius: 16px;
+    padding: 14px 20px;
+    min-width: 280px; max-width: 85%;
+    font-size: 16px; z-index: 30;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    transition: transform 0.35s cubic-bezier(.2,.8,.2,1);
+    pointer-events: none;
+  }
+  #parent-toast.show { transform: translateX(-50%) translateY(0); }
+  #parent-toast .toast-head {
+    font-size: 13px; color: #2ecc71;
+    font-weight: 800; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  #parent-toast .toast-body { font-weight: 600; font-style: italic; }
+
+  /* ============ PORTRAIT PHONE ============ */
+  @media (orientation: portrait) and (max-width: 640px) {
+    #body { flex-direction: column; }
+    #rail {
+      flex: 0 0 auto; max-width: none;
+      flex-direction: row;
+      border-right: none;
+      border-bottom: 3px solid #0f3460;
+      min-width: 0; padding: 8px; gap: 6px;
+    }
+    .rail-primary { flex: 1; min-height: 110px; font-size: 22px; }
+    .rail-primary .rail-emoji { font-size: 44px; margin-bottom: 2px; }
+    .rail-primary .rail-photo { width: 56px; height: 56px; }
+    .rail-secondary-row { display: flex; flex-direction: column; gap: 4px; flex: 0 0 80px; }
+    .rail-secondary { min-height: 34px; font-size: 14px; padding: 2px; }
+    .rail-secondary .sec-emoji { font-size: 18px; }
+    #grid { grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; }
+    .bar-btn { width: 60px; height: 60px; font-size: 26px; }
+    .msg-tile { width: 60px; height: 60px; }
+    .cg-cat-buttons { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="message-bar">
+    <div id="message-strip" aria-label="Message"></div>
+    <button class="bar-btn" id="clear-btn" aria-label="Clear last word">⌫</button>
+    <button class="bar-btn" id="speak-btn" aria-label="Speak">🔊</button>
+  </div>
+
+  <div id="body">
+    <div id="rail">
+      <button class="rail-primary" id="btn-student">
+        <span class="rail-emoji" id="student-emoji">👦</span>
+        <span id="student-label">Kase</span>
+      </button>
+      <button class="rail-primary" id="btn-want">
+        <span class="rail-emoji">🤲</span>
+        <span>want</span>
+      </button>
+      <div class="rail-secondary-row">
+        <button class="rail-secondary" id="btn-yes"><span class="sec-emoji">👍</span>yes</button>
+        <button class="rail-secondary" id="btn-no"><span class="sec-emoji">👎</span>no</button>
+        <button class="rail-secondary" id="btn-help"><span class="sec-emoji">🆘</span>help</button>
+      </div>
+    </div>
+
+    <div id="grid-wrap">
+      <div id="grid"></div>
+    </div>
+  </div>
+
+  <div id="tabs"></div>
+</div>
+
+<button id="lock-btn" aria-label="Caregiver mode">⚙</button>
+
+<!-- ========== CAREGIVER PANEL ========== -->
+<div id="caregiver-panel" class="panel" role="dialog" aria-modal="true" aria-label="Caregiver settings">
+  <h2>Caregiver Settings</h2>
+  <div class="sub">Press and hold ⚙ for 2 seconds to reopen this panel.</div>
+
+  <h3>Student</h3>
+  <div class="cg-row">
+    <label>Name</label>
+    <input type="text" id="student-name-input" maxlength="16" />
+  </div>
+  <div class="cg-row">
+    <label>Emoji / avatar</label>
+    <input type="text" id="student-emoji-input" maxlength="4" />
+  </div>
+  <div class="cg-row">
+    <label>Or use a photo</label>
+    <button class="cg-cat-btn" id="student-photo-btn" style="max-width:60%">📷 Upload photo</button>
+  </div>
+
+  <h3>Customize Categories</h3>
+  <div class="sub" style="margin-top:-8px">Add, remove, or reorder items. Replace stock images with photos of the real things in your child's world.</div>
+  <div class="cg-cat-buttons" id="cg-cat-buttons"></div>
+
+  <h3>Parent Notifications</h3>
+  <div class="cg-row">
+    <label>Send message to parent when Speak is tapped</label>
+    <div class="toggle on" id="toggle-send-parent" role="switch" aria-checked="true"></div>
+  </div>
+  <div class="cg-row">
+    <label>Parent name (Mom, Dad…)</label>
+    <input type="text" id="parent-name-input" maxlength="16" />
+  </div>
+  <div class="cg-row">
+    <label>Parent phone (for future SMS)</label>
+    <input type="tel" id="parent-phone-input" placeholder="+1 325-555-0123" />
+  </div>
+
+  <h3>Speech</h3>
+  <div class="cg-row">
+    <label>Speak each word on tap</label>
+    <div class="toggle on" id="toggle-speak-on-tap" role="switch" aria-checked="true"></div>
+  </div>
+  <div class="cg-row">
+    <label>Voice</label>
+    <select id="voice-select"></select>
+  </div>
+  <div class="cg-row">
+    <label>Speech rate: <span id="rate-display">1.0</span>x</label>
+    <input type="range" id="rate-slider" min="0.6" max="1.4" step="0.05" value="1.0" />
+  </div>
+  <div class="cg-row">
+    <label>Auto-clear message after speaking</label>
+    <div class="toggle" id="toggle-auto-clear" role="switch" aria-checked="false"></div>
+  </div>
+
+  <div class="cg-hint">
+    <strong>Flow:</strong> [Student] → [want] → pick a category → pick the thing. Example: <em>Kase → want → Food → pizza → 🔊</em> speaks "Kase wants pizza" and notifies Dad. Customize any category's items and images above.
+  </div>
+
+  <button id="close-cg">Close</button>
+</div>
+
+<!-- ========== EDITOR PANEL ========== -->
+<div id="editor-panel" class="panel" role="dialog" aria-modal="true" aria-label="Category editor">
+  <div class="editor-header">
+    <button class="editor-back" id="editor-back">← Back</button>
+    <h2 id="editor-title">Edit</h2>
+  </div>
+  <div id="editor-list"></div>
+  <div class="editor-actions">
+    <button id="editor-add">＋ Add new item</button>
+    <button id="editor-reset">↺ Reset this category to defaults</button>
+    <button id="editor-done">Done</button>
+  </div>
+  <div class="editor-hint">
+    <strong>Tip:</strong> Tap the image slot on any item to replace the stock picture with a photo from your iPad. Photos are kept on this device only. Type in the "speak as" field to change how a word sounds when the sentence is spoken (e.g., "pizza" → "some pizza").
+  </div>
+</div>
+
+<!-- ========== IMAGE CHOICE SHEET ========== -->
+<div id="image-sheet" role="dialog" aria-modal="true">
+  <div class="sheet-card">
+    <h3 id="sheet-title">Change image</h3>
+    <button class="sheet-photo" id="sheet-photo-btn">📷 Upload a photo</button>
+    <button class="sheet-emoji" id="sheet-emoji-btn">😀 Change emoji</button>
+    <button class="sheet-clear" id="sheet-clear-btn">↺ Reset to default</button>
+    <button class="sheet-cancel" id="sheet-cancel-btn">Cancel</button>
+  </div>
+</div>
+
+<!-- Hidden file input, reused everywhere -->
+<input type="file" id="file-input" accept="image/*" style="display:none" />
+
+<!-- Toast -->
+<div id="parent-toast" role="status" aria-live="polite">
+  <div class="toast-head">📱 <span id="toast-sent-to">Sent to Dad</span></div>
+  <div class="toast-body" id="toast-body"></div>
+</div>
+
+<script>
+/* =============================================================
+   DEFAULT VOCABULARY  (reset target)
+   ============================================================= */
+const DEFAULT_VOCAB = {
+  food: [
+    { word: "water",   speak: "water",    emoji: "💧", color: "noun" },
+    { word: "milk",    speak: "milk",     emoji: "🥛", color: "noun" },
+    { word: "juice",   speak: "juice",    emoji: "🧃", color: "noun" },
+    { word: "apple",   speak: "an apple", emoji: "🍎", color: "noun" },
+    { word: "banana",  speak: "a banana", emoji: "🍌", color: "noun" },
+    { word: "bread",   speak: "bread",    emoji: "🍞", color: "noun" },
+    { word: "cheese",  speak: "cheese",   emoji: "🧀", color: "noun" },
+    { word: "cookie",  speak: "a cookie", emoji: "🍪", color: "noun" },
+    { word: "pizza",   speak: "pizza",    emoji: "🍕", color: "noun" },
+    { word: "chicken", speak: "chicken",  emoji: "🍗", color: "noun" },
+    { word: "cereal",  speak: "cereal",   emoji: "🥣", color: "noun" },
+    { word: "more",    speak: "more",     emoji: "➕", color: "desc" }
+  ],
+  people: [
+    { word: "mom",     speak: "mom",      emoji: "👩",   color: "pronoun" },
+    { word: "dad",     speak: "dad",      emoji: "👨",   color: "pronoun" },
+    { word: "brother", speak: "brother",  emoji: "👦",   color: "pronoun" },
+    { word: "sister",  speak: "sister",   emoji: "👧",   color: "pronoun" },
+    { word: "grandma", speak: "grandma",  emoji: "👵",   color: "pronoun" },
+    { word: "grandpa", speak: "grandpa",  emoji: "👴",   color: "pronoun" },
+    { word: "teacher", speak: "teacher",  emoji: "🧑‍🏫", color: "pronoun" },
+    { word: "friend",  speak: "a friend", emoji: "🧒",   color: "pronoun" },
+    { word: "hug",     speak: "a hug",    emoji: "🤗",   color: "verb"    }
+  ],
+  places: [
+    { word: "home",     speak: "to go home",        emoji: "🏠", color: "noun" },
+    { word: "school",   speak: "to go to school",   emoji: "🏫", color: "noun" },
+    { word: "park",     speak: "to go to the park", emoji: "🌳", color: "noun" },
+    { word: "store",    speak: "to go to the store",emoji: "🏪", color: "noun" },
+    { word: "bathroom", speak: "the bathroom",      emoji: "🚽", color: "noun" },
+    { word: "outside",  speak: "to go outside",     emoji: "🌞", color: "noun" },
+    { word: "car",      speak: "the car",           emoji: "🚗", color: "noun" },
+    { word: "bed",      speak: "to go to bed",      emoji: "🛏️", color: "noun" }
+  ],
+  feel: [
+    { word: "happy",   speak: "to be happy",  emoji: "😊", color: "desc" },
+    { word: "sad",     speak: "I feel sad",   emoji: "😢", color: "desc" },
+    { word: "tired",   speak: "I am tired",   emoji: "😴", color: "desc" },
+    { word: "hurt",    speak: "I am hurt",    emoji: "🤕", color: "desc" },
+    { word: "scared",  speak: "I am scared",  emoji: "😨", color: "desc" },
+    { word: "excited", speak: "I am excited", emoji: "🤩", color: "desc" },
+    { word: "play",    speak: "to play",      emoji: "🎮", color: "verb" },
+    { word: "break",   speak: "a break",      emoji: "⏸️", color: "desc" }
+  ]
+};
+
+const CATEGORIES = [
+  { id: "food",   label: "Food",     emoji: "🍎" },
+  { id: "people", label: "People",   emoji: "👨‍👩‍👧" },
+  { id: "places", label: "Places",   emoji: "📍" },
+  { id: "feel",   label: "Feelings", emoji: "😊" }
+];
+
+/* =============================================================
+   STATE + PERSISTENCE
+   ============================================================= */
+const state = {
+  currentCategory: "food",
+  message: [],
+  settings: loadSettings(),
+  vocab: loadVocab(),
+  editingCategory: null
+};
+
+function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem("talk-settings-v2");
+    if (raw) return { ...defaults(), ...JSON.parse(raw) };
+  } catch(e) {}
+  return defaults();
+  function defaults() {
+    return {
+      studentName: "Kase",
+      studentEmoji: "👦",
+      studentPhoto: null,
+      parentName: "Dad",
+      parentPhone: "",
+      sendToParent: true,
+      speakOnTap: true,
+      autoClear: false,
+      rate: 1.0,
+      voiceURI: null
+    };
+  }
+}
+function saveSettings() {
+  try { localStorage.setItem("talk-settings-v2", JSON.stringify(state.settings)); }
+  catch(e) { alert("Couldn't save settings — device storage may be full."); }
+}
+
+function loadVocab() {
+  try {
+    const raw = localStorage.getItem("talk-vocab-v2");
+    if (raw) {
+      const v = JSON.parse(raw);
+      // fill any missing categories from defaults
+      for (const c of Object.keys(DEFAULT_VOCAB)) {
+        if (!Array.isArray(v[c])) v[c] = deepClone(DEFAULT_VOCAB[c]);
+      }
+      return v;
+    }
+  } catch(e) {}
+  return deepClone(DEFAULT_VOCAB);
+}
+function saveVocab() {
+  try { localStorage.setItem("talk-vocab-v2", JSON.stringify(state.vocab)); }
+  catch(e) { alert("Couldn't save — device storage may be full. Try removing some photos."); }
+}
+
+/* =============================================================
+   SPEECH
+   ============================================================= */
+let voices = [];
+function loadVoices() {
+  voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  const select = document.getElementById("voice-select");
+  if (!select) return;
+  select.innerHTML = "";
+  const en = voices.filter(v => v.lang.startsWith("en"));
+  const others = voices.filter(v => !v.lang.startsWith("en"));
+  [...en, ...others].forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v.voiceURI;
+    opt.textContent = `${v.name} (${v.lang})`;
+    if (state.settings.voiceURI === v.voiceURI) opt.selected = true;
+    select.appendChild(opt);
+  });
+  if (!state.settings.voiceURI && en.length) {
+    state.settings.voiceURI = en[0].voiceURI;
+    saveSettings();
+  }
+}
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+}
+
+function speak(text) {
+  if (!window.speechSynthesis || !text) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = voices.find(v => v.voiceURI === state.settings.voiceURI);
+    if (v) u.voice = v;
+    u.rate = state.settings.rate;
+    u.pitch = 1;
+    window.speechSynthesis.speak(u);
+  } catch(e) { console.warn("TTS failed:", e); }
+}
+
+/* =============================================================
+   MESSAGE + RENDERING
+   ============================================================= */
+function addToMessage(item) {
+  state.message.push({ ...item });
+  renderMessage();
+  if (state.settings.speakOnTap) speak(item.speak);
+}
+
+function buildFullPhrase() {
+  const tokens = state.message.map(m => m.speak);
+  if (
+    state.message.length >= 2 &&
+    state.message[0].isStudent &&
+    state.message[1].word === "want"
+  ) {
+    tokens[1] = "wants";
+  }
+  return tokens.join(" ").replace(/\s+/g, " ").trim();
+}
+
+function msgTileInner(item) {
+  if (item.photo) {
+    return `<img class="msg-photo" src="${item.photo}" alt=""><span class="label">${escapeHtml(item.word)}</span>`;
+  }
+  return `<span class="emoji">${item.emoji || ""}</span><span class="label">${escapeHtml(item.word)}</span>`;
+}
+function tileInner(item) {
+  if (item.photo) {
+    return `<img class="tile-photo" src="${item.photo}" alt=""><span class="tile-label">${escapeHtml(item.word)}</span>`;
+  }
+  return `<span class="tile-emoji">${item.emoji || ""}</span><span class="tile-label">${escapeHtml(item.word)}</span>`;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function renderMessage() {
+  const strip = document.getElementById("message-strip");
+  strip.innerHTML = "";
+  state.message.forEach((item, idx) => {
+    const el = document.createElement("div");
+    el.className = "msg-tile";
+    el.innerHTML = msgTileInner(item);
+    el.addEventListener("click", () => {
+      state.message.splice(idx, 1);
+      renderMessage();
+    });
+    strip.appendChild(el);
+  });
+  strip.scrollLeft = strip.scrollWidth;
+}
+
+function renderGrid() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  const list = state.vocab[state.currentCategory] || [];
+  list.forEach(item => {
+    const el = document.createElement("button");
+    el.className = `tile color-${item.color || "noun"}`;
+    el.innerHTML = tileInner(item);
+    el.addEventListener("click", () => addToMessage(item));
+    grid.appendChild(el);
+  });
+}
+
+function renderTabs() {
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = "";
+  CATEGORIES.forEach(c => {
+    const el = document.createElement("button");
+    el.className = "tab" + (c.id === state.currentCategory ? " active" : "");
+    el.innerHTML = `<span class="tab-emoji">${c.emoji}</span><span>${c.label}</span>`;
+    el.addEventListener("click", () => {
+      state.currentCategory = c.id;
+      renderTabs();
+      renderGrid();
+    });
+    tabs.appendChild(el);
+  });
+}
+
+function renderRail() {
+  const lbl = document.getElementById("student-label");
+  const em  = document.getElementById("student-emoji");
+  lbl.textContent = state.settings.studentName;
+  if (state.settings.studentPhoto) {
+    em.outerHTML = `<img id="student-emoji" class="rail-photo" src="${state.settings.studentPhoto}" alt="" />`;
+  } else {
+    em.outerHTML = `<span id="student-emoji" class="rail-emoji">${state.settings.studentEmoji}</span>`;
+  }
+}
+
+/* =============================================================
+   RAIL + MESSAGE BAR HANDLERS
+   ============================================================= */
+document.getElementById("btn-student").addEventListener("click", () => {
+  addToMessage({
+    word: state.settings.studentName,
+    speak: state.settings.studentName,
+    emoji: state.settings.studentEmoji,
+    photo: state.settings.studentPhoto || null,
+    color: "pronoun",
+    isStudent: true
+  });
+});
+document.getElementById("btn-want").addEventListener("click", () => {
+  addToMessage({ word: "want", speak: "want", emoji: "🤲", color: "verb" });
+});
+document.getElementById("btn-yes").addEventListener("click", () => {
+  addToMessage({ word: "yes", speak: "yes", emoji: "👍", color: "pronoun" });
+});
+document.getElementById("btn-no").addEventListener("click", () => {
+  addToMessage({ word: "no", speak: "no", emoji: "👎", color: "desc" });
+});
+document.getElementById("btn-help").addEventListener("click", () => {
+  addToMessage({ word: "help", speak: "help", emoji: "🆘", color: "verb" });
+});
+
+document.getElementById("speak-btn").addEventListener("click", () => {
+  if (!state.message.length) return;
+  const phrase = buildFullPhrase();
+  speak(phrase);
+  if (state.settings.sendToParent) showParentToast(phrase);
+  if (state.settings.autoClear) {
+    setTimeout(() => { state.message = []; renderMessage(); }, 800);
+  }
+});
+document.getElementById("clear-btn").addEventListener("click", () => {
+  state.message.pop();
+  renderMessage();
+});
+
+function showParentToast(phrase) {
+  const toast = document.getElementById("parent-toast");
+  const sentTo = state.settings.parentName ? `Sent to ${state.settings.parentName}` : "Sent to parent";
+  document.getElementById("toast-sent-to").textContent = sentTo;
+  document.getElementById("toast-body").textContent = `"${phrase}"`;
+  toast.classList.add("show");
+  clearTimeout(showParentToast._t);
+  showParentToast._t = setTimeout(() => toast.classList.remove("show"), 3200);
+}
+
+/* =============================================================
+   CAREGIVER LOCK (long-press)
+   ============================================================= */
+const lockBtn = document.getElementById("lock-btn");
+let pressTimer = null;
+function startPress() {
+  lockBtn.classList.add("pressing");
+  pressTimer = setTimeout(() => {
+    openCaregiver();
+    lockBtn.classList.remove("pressing");
+  }, 2000);
+}
+function cancelPress() {
+  lockBtn.classList.remove("pressing");
+  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+}
+lockBtn.addEventListener("mousedown", startPress);
+lockBtn.addEventListener("touchstart", startPress, { passive: true });
+lockBtn.addEventListener("mouseup", cancelPress);
+lockBtn.addEventListener("mouseleave", cancelPress);
+lockBtn.addEventListener("touchend", cancelPress);
+lockBtn.addEventListener("touchcancel", cancelPress);
+
+function openCaregiver() {
+  const panel = document.getElementById("caregiver-panel");
+  panel.classList.add("open");
+  document.getElementById("student-name-input").value = state.settings.studentName;
+  document.getElementById("student-emoji-input").value = state.settings.studentEmoji;
+  document.getElementById("parent-name-input").value = state.settings.parentName;
+  document.getElementById("parent-phone-input").value = state.settings.parentPhone;
+  document.getElementById("toggle-send-parent").classList.toggle("on", state.settings.sendToParent);
+  document.getElementById("toggle-speak-on-tap").classList.toggle("on", state.settings.speakOnTap);
+  document.getElementById("toggle-auto-clear").classList.toggle("on", state.settings.autoClear);
+  document.getElementById("rate-slider").value = state.settings.rate;
+  document.getElementById("rate-display").textContent = Number(state.settings.rate).toFixed(2);
+  renderCategoryButtons();
+  loadVoices();
+}
+function closeCaregiver() { document.getElementById("caregiver-panel").classList.remove("open"); }
+document.getElementById("close-cg").addEventListener("click", closeCaregiver);
+
+function renderCategoryButtons() {
+  const host = document.getElementById("cg-cat-buttons");
+  host.innerHTML = "";
+  CATEGORIES.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "cg-cat-btn";
+    const count = state.vocab[c.id] ? state.vocab[c.id].length : 0;
+    btn.innerHTML = `<span class="cat-emoji">${c.emoji}</span><span>Edit ${c.label} <small style="opacity:.6">(${count})</small></span>`;
+    btn.addEventListener("click", () => openEditor(c.id));
+    host.appendChild(btn);
+  });
+}
+
+/* Caregiver inputs */
+document.getElementById("student-name-input").addEventListener("input", (e) => {
+  state.settings.studentName = e.target.value.trim() || "Kase";
+  renderRail(); saveSettings();
+});
+document.getElementById("student-emoji-input").addEventListener("input", (e) => {
+  state.settings.studentEmoji = e.target.value || "👦";
+  renderRail(); saveSettings();
+});
+document.getElementById("student-photo-btn").addEventListener("click", () => {
+  pickFile().then(async (file) => {
+    if (!file) return;
+    const url = await resizeToDataUrl(file, 320);
+    state.settings.studentPhoto = url;
+    renderRail(); saveSettings();
+  });
+});
+document.getElementById("parent-name-input").addEventListener("input", (e) => {
+  state.settings.parentName = e.target.value.trim();
+  saveSettings();
+});
+document.getElementById("parent-phone-input").addEventListener("input", (e) => {
+  state.settings.parentPhone = e.target.value.trim();
+  saveSettings();
+});
+document.getElementById("toggle-send-parent").addEventListener("click", (e) => {
+  state.settings.sendToParent = !state.settings.sendToParent;
+  e.currentTarget.classList.toggle("on", state.settings.sendToParent);
+  saveSettings();
+});
+document.getElementById("toggle-speak-on-tap").addEventListener("click", (e) => {
+  state.settings.speakOnTap = !state.settings.speakOnTap;
+  e.currentTarget.classList.toggle("on", state.settings.speakOnTap);
+  saveSettings();
+});
+document.getElementById("toggle-auto-clear").addEventListener("click", (e) => {
+  state.settings.autoClear = !state.settings.autoClear;
+  e.currentTarget.classList.toggle("on", state.settings.autoClear);
+  saveSettings();
+});
+document.getElementById("rate-slider").addEventListener("input", (e) => {
+  state.settings.rate = parseFloat(e.target.value);
+  document.getElementById("rate-display").textContent = state.settings.rate.toFixed(2);
+  saveSettings();
+});
+document.getElementById("voice-select").addEventListener("change", (e) => {
+  state.settings.voiceURI = e.target.value;
+  saveSettings();
+});
+
+/* =============================================================
+   EDITOR PANEL
+   ============================================================= */
+function openEditor(catId) {
+  state.editingCategory = catId;
+  const cat = CATEGORIES.find(c => c.id === catId);
+  document.getElementById("editor-title").textContent = `${cat.emoji} Edit ${cat.label}`;
+  document.getElementById("editor-panel").classList.add("open");
+  renderEditorList();
+}
+function closeEditor() {
+  document.getElementById("editor-panel").classList.remove("open");
+  state.editingCategory = null;
+  renderGrid();
+  renderCategoryButtons();
+}
+document.getElementById("editor-back").addEventListener("click", closeEditor);
+document.getElementById("editor-done").addEventListener("click", closeEditor);
+
+document.getElementById("editor-add").addEventListener("click", () => {
+  const cat = state.editingCategory;
+  if (!cat) return;
+  const defaultColor = { food: "noun", people: "pronoun", places: "noun", feel: "desc" }[cat] || "noun";
+  state.vocab[cat].push({
+    word: "new",
+    speak: "new",
+    emoji: "⭐",
+    color: defaultColor
+  });
+  saveVocab();
+  renderEditorList();
+});
+document.getElementById("editor-reset").addEventListener("click", () => {
+  const cat = state.editingCategory;
+  if (!cat) return;
+  if (confirm(`Reset ${cat} to the default items? This will erase any custom items and photos in this category.`)) {
+    state.vocab[cat] = deepClone(DEFAULT_VOCAB[cat]);
+    saveVocab();
+    renderEditorList();
+  }
+});
+
+function renderEditorList() {
+  const host = document.getElementById("editor-list");
+  host.innerHTML = "";
+  const cat = state.editingCategory;
+  if (!cat) return;
+  const list = state.vocab[cat];
+
+  list.forEach((item, idx) => {
+    const row = document.createElement("div");
+    row.className = "item-row";
+
+    // Image slot
+    const imgBtn = document.createElement("button");
+    imgBtn.className = "item-img-slot";
+    imgBtn.setAttribute("aria-label", "Change image");
+    if (item.photo) {
+      const img = document.createElement("img");
+      img.src = item.photo;
+      imgBtn.appendChild(img);
+    } else {
+      imgBtn.textContent = item.emoji || "⭐";
+    }
+    imgBtn.addEventListener("click", () => openImageSheet(cat, idx));
+    row.appendChild(imgBtn);
+
+    // Inputs column
+    const col = document.createElement("div");
+    col.className = "item-input-column";
+
+    const wordInput = document.createElement("input");
+    wordInput.className = "item-word-input";
+    wordInput.type = "text";
+    wordInput.placeholder = "label (what the child sees)";
+    wordInput.value = item.word;
+    wordInput.maxLength = 20;
+    wordInput.addEventListener("input", (e) => {
+      item.word = e.target.value;
+      // If speak was equal to old word, sync it (common case)
+      if (!item._speakEdited) item.speak = e.target.value;
+      saveVocab();
+    });
+    col.appendChild(wordInput);
+
+    const speakInput = document.createElement("input");
+    speakInput.className = "item-speak-input";
+    speakInput.type = "text";
+    speakInput.placeholder = `speak as… (e.g. "a cookie")`;
+    speakInput.value = item.speak;
+    speakInput.addEventListener("input", (e) => {
+      item.speak = e.target.value;
+      item._speakEdited = true;
+      saveVocab();
+    });
+    col.appendChild(speakInput);
+    row.appendChild(col);
+
+    // Action buttons
+    const actions = document.createElement("div");
+    actions.className = "item-actions";
+    const upBtn = document.createElement("button");
+    upBtn.className = "item-btn"; upBtn.textContent = "↑";
+    upBtn.disabled = idx === 0;
+    upBtn.addEventListener("click", () => moveItem(cat, idx, -1));
+    const downBtn = document.createElement("button");
+    downBtn.className = "item-btn"; downBtn.textContent = "↓";
+    downBtn.disabled = idx === list.length - 1;
+    downBtn.addEventListener("click", () => moveItem(cat, idx, +1));
+    const delBtn = document.createElement("button");
+    delBtn.className = "item-btn danger"; delBtn.textContent = "🗑";
+    delBtn.addEventListener("click", () => {
+      if (confirm(`Remove "${item.word}"?`)) {
+        list.splice(idx, 1);
+        saveVocab();
+        renderEditorList();
+      }
+    });
+    actions.append(upBtn, downBtn, delBtn);
+    row.appendChild(actions);
+
+    host.appendChild(row);
+  });
+
+  if (list.length === 0) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "padding:24px;text-align:center;color:rgba(255,255,255,0.5);font-style:italic;";
+    empty.textContent = "No items yet. Tap \"Add new item\" below.";
+    host.appendChild(empty);
+  }
+}
+
+function moveItem(cat, idx, delta) {
+  const list = state.vocab[cat];
+  const j = idx + delta;
+  if (j < 0 || j >= list.length) return;
+  [list[idx], list[j]] = [list[j], list[idx]];
+  saveVocab();
+  renderEditorList();
+}
+
+/* =============================================================
+   IMAGE SHEET (upload / emoji / reset)
+   ============================================================= */
+let sheetTarget = null; // { cat, idx } for editor items, or 'student' for student photo
+
+function openImageSheet(cat, idx) {
+  sheetTarget = { cat, idx };
+  document.getElementById("sheet-title").textContent = `Change image for "${state.vocab[cat][idx].word}"`;
+  document.getElementById("image-sheet").classList.add("open");
+}
+function closeImageSheet() {
+  document.getElementById("image-sheet").classList.remove("open");
+  sheetTarget = null;
+}
+document.getElementById("sheet-cancel-btn").addEventListener("click", closeImageSheet);
+
+document.getElementById("sheet-photo-btn").addEventListener("click", async () => {
+  const target = sheetTarget;
+  closeImageSheet();
+  const file = await pickFile();
+  if (!file || !target) return;
+  try {
+    const url = await resizeToDataUrl(file, 256);
+    const item = state.vocab[target.cat][target.idx];
+    item.photo = url;
+    saveVocab();
+    renderEditorList();
+  } catch(e) {
+    alert("Couldn't read that image. Try a JPG or PNG from your Photos.");
+  }
+});
+document.getElementById("sheet-emoji-btn").addEventListener("click", () => {
+  const target = sheetTarget;
+  closeImageSheet();
+  if (!target) return;
+  const item = state.vocab[target.cat][target.idx];
+  const val = prompt("Type a single emoji:", item.emoji || "");
+  if (val !== null) {
+    item.emoji = (val || "").trim().slice(0, 4) || item.emoji;
+    item.photo = null; // emoji overrides photo
+    saveVocab();
+    renderEditorList();
+  }
+});
+document.getElementById("sheet-clear-btn").addEventListener("click", () => {
+  const target = sheetTarget;
+  closeImageSheet();
+  if (!target) return;
+  const item = state.vocab[target.cat][target.idx];
+  // Try to restore default for this word
+  const def = (DEFAULT_VOCAB[target.cat] || []).find(d => d.word === item.word);
+  if (def) {
+    item.emoji = def.emoji;
+    item.photo = null;
+  } else {
+    item.emoji = "⭐";
+    item.photo = null;
+  }
+  saveVocab();
+  renderEditorList();
+});
+
+/* =============================================================
+   FILE INPUT + IMAGE RESIZE
+   ============================================================= */
+const fileInput = document.getElementById("file-input");
+let filePromiseResolve = null;
+fileInput.addEventListener("change", () => {
+  const f = fileInput.files && fileInput.files[0];
+  if (filePromiseResolve) filePromiseResolve(f || null);
+  filePromiseResolve = null;
+  fileInput.value = "";
+});
+function pickFile() {
+  return new Promise((resolve) => {
+    filePromiseResolve = resolve;
+    fileInput.click();
+  });
+}
+
+function readImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function resizeToDataUrl(file, maxDim = 256) {
+  const img = await readImage(file);
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(img.width * scale));
+  canvas.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
+/* =============================================================
+   iOS GUARDS
+   ============================================================= */
+let ttsPrimed = false;
+document.addEventListener("click", () => {
+  if (!ttsPrimed && window.speechSynthesis) {
+    const u = new SpeechSynthesisUtterance("");
+    window.speechSynthesis.speak(u);
+    ttsPrimed = true;
+  }
+}, { once: true });
+document.addEventListener("gesturestart", (e) => e.preventDefault());
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+/* =============================================================
+   INITIAL RENDER
+   ============================================================= */
+renderRail();
+renderTabs();
+renderGrid();
+renderMessage();
+</script>
+</body>
+</html>

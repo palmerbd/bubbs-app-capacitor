@@ -1,0 +1,19 @@
+{
+  "name": "bubbs-talks",
+  "version": "1.0.0",
+  "description": "Bubbs-Talks AAC app — Capacitor iOS shell wrapping the HTML AAC prototype.",
+  "main": "www/index.html",
+  "private": true,
+  "scripts": {
+    "build": "echo \"Static site, nothing to build. Capacitor reads www/.\"",
+    "cap:sync": "cap sync ios",
+    "cap:open": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/ios": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}
