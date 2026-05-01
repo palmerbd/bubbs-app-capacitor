@@ -6,9 +6,6 @@ workflows:
     integrations:
       app_store_connect: bubbs-asc-key
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.abilenewebsitedesign.bubbs
       vars:
         BUNDLE_ID: "com.abilenewebsitedesign.bubbs"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
