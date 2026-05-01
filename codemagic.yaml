@@ -29,17 +29,6 @@ workflows:
         script: |
           npx cap add ios || true
           npx cap sync ios
-      - name: Set up code signing
-        script: |
-          keychain initialize
-          openssl genrsa -out /tmp/cm_priv.pem 2048
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create \
-            --certificate-key=@file:/tmp/cm_priv.pem
-          keychain add-certificates
-          cd $CM_BUILD_DIR/ios/App
-          xcode-project use-profiles
       - name: Patch Info.plist for TestFlight
         script: |
           PLIST="$CM_BUILD_DIR/ios/App/App/Info.plist"
@@ -52,6 +41,17 @@ workflows:
         script: |
           cd $CM_BUILD_DIR/ios/App
           agvtool new-version -all $(($BUILD_NUMBER + 200))
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          openssl genrsa -out /tmp/cm_priv.pem 2048
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create \
+            --certificate-key=@file:/tmp/cm_priv.pem
+          keychain add-certificates
+          cd $CM_BUILD_DIR/ios/App
+          xcode-project use-profiles
       - name: Build IPA
         script: |
           xcode-project build-ipa \
