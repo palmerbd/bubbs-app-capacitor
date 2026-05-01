@@ -38,7 +38,8 @@ workflows:
             --create \
             --certificate-key=@file:/tmp/cm_priv.pem
           keychain add-certificates
-          xcode-project use-profiles --workspace "$CM_BUILD_DIR/$XCODE_WORKSPACE"
+          cd $CM_BUILD_DIR/ios/App
+          xcode-project use-profiles
       - name: Increment build number
         script: |
           cd $CM_BUILD_DIR/ios/App
