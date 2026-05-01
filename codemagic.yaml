@@ -34,6 +34,11 @@ workflows:
           npx cap sync ios
       - name: Set up code signing
         script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
           xcode-project use-profiles
       - name: Increment build number
         script: |
