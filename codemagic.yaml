@@ -32,11 +32,13 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
+          openssl genrsa -out /tmp/cm_priv.pem 2048
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --certificate-key=@file:/tmp/cm_priv.pem
           keychain add-certificates
-          xcode-project use-profiles
+          xcode-project use-profiles --workspace "$CM_BUILD_DIR/$XCODE_WORKSPACE"
       - name: Increment build number
         script: |
           cd $CM_BUILD_DIR/ios/App
