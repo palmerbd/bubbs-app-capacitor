@@ -1,3 +1,5 @@
+# Webhook on github.com/palmerbd/bubbs-app-capacitor reconnected 2026-05-05.
+# Pushes to main now auto-trigger this workflow.
 workflows:
   ios-release:
     name: iOS Production Build (Bubbs-Talks)
