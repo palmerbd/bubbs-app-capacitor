@@ -645,6 +645,122 @@
     font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.5;
   }
 
+  /* ============ PAIRING SCREENS (child + parent) ============ */
+  #child-pairing-screen, #parent-pairing-screen {
+    position: fixed; inset: 0;
+    z-index: 95;
+    display: none;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px;
+    background: rgba(15,52,96,0.96);
+    color: #fff;
+    overflow-y: auto;
+  }
+  #child-pairing-screen.open, #parent-pairing-screen.open { display: flex; }
+  .cp-card, .pp-card {
+    max-width: 420px; width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    padding: 24px;
+    text-align: center;
+  }
+  .cp-card h2, .pp-card h2 {
+    margin: 0 0 8px; font-size: 22px; font-weight: 800;
+  }
+  .cp-tagline, .pp-tagline {
+    color: rgba(255,255,255,0.75);
+    font-size: 14px; line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .cp-name {
+    font-size: 16px; font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 12px;
+  }
+  .cp-qr {
+    background: #fff;
+    width: 220px; height: 220px;
+    margin: 0 auto 18px;
+    padding: 12px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cp-qr svg { width: 100%; height: 100%; max-width: 196px; max-height: 196px; }
+  .cp-code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 36px; font-weight: 800;
+    letter-spacing: 4px;
+    background: rgba(46,204,113,0.12);
+    border: 1px solid rgba(46,204,113,0.4);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .cp-hint, .pp-hint {
+    font-size: 12px; color: rgba(255,255,255,0.6);
+    margin-bottom: 16px;
+  }
+  .cp-actions {
+    display: flex; gap: 10px;
+  }
+  .cp-actions button {
+    flex: 1;
+    padding: 12px; border-radius: 10px;
+    font-weight: 700; font-size: 15px;
+    cursor: pointer; border: none;
+  }
+  .cp-refresh {
+    background: #2ecc71; color: #fff;
+  }
+  .cp-close, .pp-close {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+  }
+  .pp-input-row {
+    margin-bottom: 12px;
+  }
+  #pp-code-input {
+    width: 100%; box-sizing: border-box;
+    padding: 18px; border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.25);
+    color: #fff;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 28px; font-weight: 800;
+    letter-spacing: 6px;
+    text-align: center;
+  }
+  #pp-code-input:focus {
+    outline: none; border-color: #2ecc71;
+  }
+  .pp-submit {
+    width: 100%;
+    background: #2ecc71; color: #fff;
+    border: none; border-radius: 12px;
+    padding: 14px;
+    font-size: 16px; font-weight: 800;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .pp-status {
+    min-height: 22px;
+    font-size: 13px; color: rgba(255,255,255,0.85);
+    margin-bottom: 16px;
+  }
+  .pp-close {
+    width: 100%;
+    background: transparent;
+    color: rgba(255,255,255,0.8);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 10px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
   /* ============ PARENT INBOX (V1-B placeholder) ============ */
   /*
    * When the user picks "Parent" in role select, we hide the AAC board
@@ -810,6 +926,12 @@
     <strong>Flow:</strong> [Student] → [want] → pick a category → pick the thing. Example: <em>Kase → want → Food → pizza → 🔊</em> speaks "Kase wants pizza" and notifies Dad. Customize any category's items and images above.
   </div>
 
+  <h3>Pairing</h3>
+  <div class="cg-row">
+    <label>Show a pairing code so a parent's phone can receive messages from this iPad</label>
+    <button class="cg-cat-btn" id="show-pairing-btn" style="max-width:60%">📱 Show pairing code</button>
+  </div>
+
   <h3>Device Role</h3>
   <div class="cg-row">
     <label>This device is set up as <strong id="current-role-label">Child</strong></label>
@@ -927,9 +1049,15 @@
   </div>
 </div>
 
+<!-- qrcode-generator (small, ~10kb): used by pairing.js to render the
+     pairing QR. Loaded from cdnjs.cloudflare.com per project convention. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
 <script src="config.js"></script>
 <script src="paywall.js"></script>
 <script src="role-select.js"></script>
+<script src="pairing-codec.js"></script>
+<script src="pairing.js"></script>
 <script>
 /* =============================================================
    DEFAULT VOCABULARY  (reset target)
@@ -1625,6 +1753,22 @@ if (resetRoleBtn) {
 }
 window.addEventListener("bubbs:role-ready", refreshRoleLabel);
 refreshRoleLabel();
+
+/* =============================================================
+   PAIRING ENTRY POINTS  (caregiver panel + dev hooks)
+   ============================================================= */
+const showPairingBtn = document.getElementById("show-pairing-btn");
+if (showPairingBtn) {
+  showPairingBtn.addEventListener("click", () => {
+    if (window.BubbsPairing && window.BubbsPairing.showChildPairingCode) {
+      // Close the caregiver panel so the QR fills the screen.
+      closeCaregiver && closeCaregiver();
+      window.BubbsPairing.showChildPairingCode();
+    } else {
+      alert("Pairing module not loaded. Try restarting the app.");
+    }
+  });
+}
 
 /* =============================================================
    INITIAL RENDER
