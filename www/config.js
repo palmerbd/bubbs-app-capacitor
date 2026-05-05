@@ -10,7 +10,7 @@
 window.BubbsConfig = {
   // RevenueCat iOS public SDK key. Starts with `appl_`.
   // Find at: https://app.revenuecat.com → Project settings → API keys → Apple App Store row.
-  revenueCatApiKey: "REPLACE_WITH_RC_PUBLIC_IOS_KEY",
+  revenueCatApiKey: "appl_htrVigSLYHunYWRTPYaMPbhMUMw",
 
   // Entitlement identifier configured in RevenueCat.
   // Find at: https://app.revenuecat.com → Entitlements.
@@ -18,12 +18,12 @@ window.BubbsConfig = {
 
   // Firebase web app config — copy/paste from Firebase Console → Project settings → Your apps → Web → Config.
   firebase: {
-    apiKey: "REPLACE_WITH_FIREBASE_API_KEY",
+    apiKey: "AIzaSyB1dLZnpQDx6lHFTCDi_7Jlt_mQ3etWOMY",
     authDomain: "bubbs-app-prod.firebaseapp.com",
     projectId: "bubbs-app-prod",
-    storageBucket: "bubbs-app-prod.appspot.com",
-    messagingSenderId: "REPLACE_WITH_SENDER_ID",
-    appId: "REPLACE_WITH_APP_ID",
+    storageBucket: "bubbs-app-prod.firebasestorage.app",
+    messagingSenderId: "103336467618",
+    appId: "1:103336467618:web:ac218dcbf62fc08949cbfb",
   },
 
   // Set to true to bypass the paywall during development. MUST be false

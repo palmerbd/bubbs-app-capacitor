@@ -494,6 +494,101 @@
   }
   #parent-toast .toast-body { font-weight: 600; font-style: italic; }
 
+  /* ============ PAYWALL ============ */
+  /*
+   * The paywall is OPEN by default so there's no flash of the AAC board
+   * on cold start. The paywall script (paywall.js) closes it via the
+   * .closed class once the user is confirmed-entitled, OR if config has
+   * placeholder values (current TestFlight build behavior).
+   */
+  #paywall-screen {
+    position: fixed; inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px;
+    background: linear-gradient(160deg, #1a1a2e 0%, #0f3460 100%);
+    color: #fff;
+    overflow-y: auto;
+  }
+  #paywall-screen.closed { display: none; }
+  /* Legacy .open class — the script previously added it; alias for safety. */
+  #paywall-screen.open { display: flex; }
+  #paywall-screen .pw-card {
+    max-width: 420px; width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    padding: 28px 24px;
+    text-align: center;
+  }
+  #paywall-screen h1 {
+    margin: 0 0 8px; font-size: 32px; font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  #paywall-screen .pw-tagline {
+    color: rgba(255,255,255,0.75);
+    font-size: 16px; margin-bottom: 24px;
+  }
+  #paywall-screen .pw-features {
+    text-align: left; padding: 0; margin: 0 0 24px;
+    list-style: none;
+  }
+  #paywall-screen .pw-features li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0; font-size: 15px;
+    color: rgba(255,255,255,0.92);
+    line-height: 1.4;
+  }
+  #paywall-screen .pw-features li::before {
+    content: "✓"; color: #2ecc71;
+    font-weight: 800; flex: 0 0 18px;
+  }
+  #paywall-screen .pw-price {
+    background: rgba(46,204,113,0.12);
+    border: 1px solid rgba(46,204,113,0.4);
+    border-radius: 12px;
+    padding: 14px 12px;
+    margin-bottom: 18px;
+    font-size: 15px; line-height: 1.4;
+  }
+  #paywall-screen .pw-price strong { font-size: 18px; }
+  #paywall-start-trial {
+    width: 100%;
+    border: none; border-radius: 14px;
+    background: #2ecc71; color: #fff;
+    font-size: 18px; font-weight: 800;
+    padding: 16px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  #paywall-start-trial:disabled { opacity: 0.5; cursor: default; }
+  #paywall-restore {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    font-size: 14px; font-weight: 600;
+    padding: 14px 8px;
+    margin-top: 8px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  #paywall-restore:disabled { opacity: 0.4; cursor: default; }
+  #paywall-status {
+    min-height: 22px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+  }
+  #paywall-screen .pw-legal {
+    margin-top: 20px;
+    font-size: 11px; color: rgba(255,255,255,0.5);
+    line-height: 1.5;
+  }
+  #paywall-screen .pw-legal a { color: rgba(255,255,255,0.7); }
+
   /* ============ PORTRAIT PHONE ============ */
   @media (orientation: portrait) and (max-width: 640px) {
     #body { flex-direction: column; }
@@ -651,6 +746,38 @@
   <div class="toast-body" id="toast-body"></div>
 </div>
 
+<!-- ========== PAYWALL ========== -->
+<div id="paywall-screen" role="dialog" aria-modal="true" aria-label="Subscribe to Bubbs-Talks">
+  <div class="pw-card">
+    <h1>Bubbs-Talks</h1>
+    <div class="pw-tagline">Give your child a voice.</div>
+    <ul class="pw-features">
+      <li>Picture-based AAC for non-verbal kids</li>
+      <li>Tap pictures to build full sentences and speak them aloud</li>
+      <li>Customize tiles with photos of your child's real world</li>
+      <li>Caregivers get a phone notification when your child speaks</li>
+      <li>Premium AAC at a fraction of the cost of $250+ alternatives</li>
+    </ul>
+    <div class="pw-price">
+      <strong>Try free for 7 days</strong><br />
+      then $9.99/month. Cancel anytime in Settings.
+    </div>
+    <button id="paywall-start-trial">Start 7-Day Free Trial</button>
+    <button id="paywall-restore">Restore Purchases</button>
+    <div id="paywall-status" aria-live="polite"></div>
+    <div class="pw-legal">
+      Payment is charged to your Apple ID after the 7-day trial.
+      Subscription renews monthly and can be canceled at any time
+      from Settings &rsaquo; Apple ID &rsaquo; Subscriptions.
+      <br /><br />
+      <a href="https://bubbs-app.com/terms">Terms</a> &middot;
+      <a href="https://bubbs-app.com/privacy">Privacy</a>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="paywall.js"></script>
 <script>
 /* =============================================================
    DEFAULT VOCABULARY  (reset target)

@@ -29,6 +29,16 @@ workflows:
         script: |
           npx cap add ios || true
           npx cap sync ios
+      - name: Stage GoogleService-Info.plist (if present in ios-config)
+        script: |
+          SRC="$CM_BUILD_DIR/ios-config/GoogleService-Info.plist"
+          DEST="$CM_BUILD_DIR/ios/App/App/GoogleService-Info.plist"
+          if [ -f "$SRC" ]; then
+            cp "$SRC" "$DEST"
+            echo "Staged GoogleService-Info.plist into ios/App/App/"
+          else
+            echo "No ios-config/GoogleService-Info.plist found — Firebase native init will be skipped"
+          fi
       - name: Patch Info.plist (ITSAppUsesNonExemptEncryption only)
         script: |
           PLIST="$CM_BUILD_DIR/ios/App/App/Info.plist"
