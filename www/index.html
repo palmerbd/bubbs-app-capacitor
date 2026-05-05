@@ -589,6 +589,110 @@
   }
   #paywall-screen .pw-legal a { color: rgba(255,255,255,0.7); }
 
+  /* ============ ROLE SELECT ============ */
+  /*
+   * Shown after paywall passes, only on first launch (or when caregiver
+   * resets via Settings). Default state is hidden — role-select.js opens
+   * it if no role is stored in localStorage under 'bubbs-role'.
+   */
+  #role-screen {
+    position: fixed; inset: 0;
+    z-index: 90;
+    display: none;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px;
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 100%);
+    color: #fff;
+    overflow-y: auto;
+  }
+  #role-screen.open { display: flex; }
+  #role-screen .rs-card {
+    max-width: 440px; width: 100%;
+    text-align: center;
+  }
+  #role-screen h1 { margin: 0 0 6px; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+  #role-screen .rs-tagline { color: rgba(255,255,255,0.7); margin-bottom: 28px; font-size: 16px; }
+  #role-screen .rs-buttons { display: flex; flex-direction: column; gap: 14px; }
+  #role-screen .rs-btn {
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.04);
+    color: #fff; cursor: pointer;
+    padding: 24px 18px;
+    border-radius: 16px;
+    text-align: left;
+    display: flex; align-items: flex-start; gap: 16px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  #role-screen .rs-btn:hover, #role-screen .rs-btn:focus-visible {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.3);
+    outline: none;
+  }
+  #role-screen .rs-btn .rs-emoji {
+    font-size: 40px; line-height: 1; flex: 0 0 auto;
+  }
+  #role-screen .rs-btn .rs-text { flex: 1; }
+  #role-screen .rs-btn .rs-label {
+    display: block; font-size: 18px; font-weight: 800; margin-bottom: 4px;
+  }
+  #role-screen .rs-btn .rs-desc {
+    display: block; font-size: 13px;
+    color: rgba(255,255,255,0.7); line-height: 1.4;
+  }
+  #role-screen .rs-hint {
+    margin-top: 22px;
+    font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.5;
+  }
+
+  /* ============ PARENT INBOX (V1-B placeholder) ============ */
+  /*
+   * When the user picks "Parent" in role select, we hide the AAC board
+   * and show this inbox shell. Real Firestore + FCM wiring lands in a
+   * later commit (V1-B batch 5). For now it shows a "waiting for pairing"
+   * empty state so parent users don't see a broken AAC board.
+   */
+  #parent-shell {
+    display: none; flex-direction: column;
+    height: 100vh; height: 100dvh;
+    padding: 24px;
+    color: #fff;
+    background: #1a1a2e;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #parent-shell.open { display: flex; }
+  #parent-shell .ps-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+  }
+  #parent-shell .ps-header h1 {
+    margin: 0; font-size: 22px; font-weight: 800;
+  }
+  #parent-shell .ps-switch {
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.8);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 13px; cursor: pointer;
+  }
+  #parent-shell .ps-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 24px;
+  }
+  #parent-shell .ps-empty .ps-emoji { font-size: 60px; margin-bottom: 16px; }
+  #parent-shell .ps-empty h2 { font-size: 22px; margin: 0 0 8px; }
+  #parent-shell .ps-empty p {
+    color: rgba(255,255,255,0.7);
+    max-width: 320px; line-height: 1.5; margin: 0 0 20px;
+  }
+  #parent-shell .ps-empty .ps-pairing-btn {
+    background: #2ecc71; color: #fff;
+    border: none; border-radius: 12px;
+    padding: 12px 22px; font-weight: 700; font-size: 15px;
+    cursor: pointer;
+  }
+
   /* ============ PORTRAIT PHONE ============ */
   @media (orientation: portrait) and (max-width: 640px) {
     #body { flex-direction: column; }
@@ -706,6 +810,12 @@
     <strong>Flow:</strong> [Student] → [want] → pick a category → pick the thing. Example: <em>Kase → want → Food → pizza → 🔊</em> speaks "Kase wants pizza" and notifies Dad. Customize any category's items and images above.
   </div>
 
+  <h3>Device Role</h3>
+  <div class="cg-row">
+    <label>This device is set up as <strong id="current-role-label">Child</strong></label>
+    <button class="cg-cat-btn" id="reset-role-btn" style="max-width:60%">Switch to Parent mode</button>
+  </div>
+
   <button id="close-cg">Close</button>
 </div>
 
@@ -776,8 +886,50 @@
   </div>
 </div>
 
+<!-- ========== ROLE SELECT ========== -->
+<div id="role-screen" role="dialog" aria-modal="true" aria-label="Choose role for this device">
+  <div class="rs-card">
+    <h1>Who is using this device?</h1>
+    <div class="rs-tagline">You can change this later in Settings.</div>
+    <div class="rs-buttons">
+      <button class="rs-btn" id="role-child-btn" type="button">
+        <span class="rs-emoji">🧒</span>
+        <span class="rs-text">
+          <span class="rs-label">Child</span>
+          <span class="rs-desc">This iPad is for the child to communicate. Show the picture board with categories like food, people, places.</span>
+        </span>
+      </button>
+      <button class="rs-btn" id="role-parent-btn" type="button">
+        <span class="rs-emoji">👨‍👩‍👧</span>
+        <span class="rs-text">
+          <span class="rs-label">Parent / Caregiver</span>
+          <span class="rs-desc">This phone or tablet is for receiving the child's messages. You'll pair it with the child's device.</span>
+        </span>
+      </button>
+    </div>
+    <div class="rs-hint">
+      Most families pick <strong>Child</strong> on the iPad and <strong>Parent</strong> on the iPhone.
+    </div>
+  </div>
+</div>
+
+<!-- ========== PARENT SHELL (placeholder until V1-B batch 5 wires Firebase) ========== -->
+<div id="parent-shell" role="main">
+  <div class="ps-header">
+    <h1>Bubbs &middot; Parent</h1>
+    <button class="ps-switch" id="parent-switch-role-btn" type="button">Switch to Child mode</button>
+  </div>
+  <div class="ps-empty">
+    <div class="ps-emoji">📱</div>
+    <h2>Waiting to pair</h2>
+    <p>Pair this phone with your child's iPad so messages from their picture board appear here as notifications.</p>
+    <button class="ps-pairing-btn" id="parent-pair-btn" type="button">Pair with child's device</button>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script src="paywall.js"></script>
+<script src="role-select.js"></script>
 <script>
 /* =============================================================
    DEFAULT VOCABULARY  (reset target)
@@ -1441,6 +1593,38 @@ document.addEventListener("click", () => {
 }, { once: true });
 document.addEventListener("gesturestart", (e) => e.preventDefault());
 document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+/* =============================================================
+   ROLE INDICATOR + SWITCH BUTTON  (caregiver panel)
+   ============================================================= */
+function refreshRoleLabel() {
+  if (!window.BubbsRole) return;
+  const role = window.BubbsRole.get();
+  const label = document.getElementById("current-role-label");
+  const btn = document.getElementById("reset-role-btn");
+  if (!label || !btn) return;
+  if (role === "parent") {
+    label.textContent = "Parent / Caregiver";
+    btn.textContent = "Switch to Child mode";
+  } else {
+    label.textContent = "Child";
+    btn.textContent = "Switch to Parent mode";
+  }
+}
+const resetRoleBtn = document.getElementById("reset-role-btn");
+if (resetRoleBtn) {
+  resetRoleBtn.addEventListener("click", () => {
+    if (!window.BubbsRole) return;
+    const current = window.BubbsRole.get();
+    const next = current === "parent" ? "child" : "parent";
+    window.BubbsRole.set(next);
+    // Close the caregiver panel since the visible app is changing.
+    closeCaregiver && closeCaregiver();
+    refreshRoleLabel();
+  });
+}
+window.addEventListener("bubbs:role-ready", refreshRoleLabel);
+refreshRoleLabel();
 
 /* =============================================================
    INITIAL RENDER
