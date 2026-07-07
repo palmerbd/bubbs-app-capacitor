@@ -1028,6 +1028,237 @@
     line-height: 1.2;
   }
 
+  /* ---------- Games (V2-3+) ---------- */
+  #games-launcher {
+    max-width: 640px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px; padding-top: 8px;
+  }
+  .game-card {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px;
+    border: none; border-radius: 20px;
+    background: #fff; color: #1e293b;
+    padding: 24px 16px;
+    cursor: pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08);
+    text-align: center;
+  }
+  .game-card:active { transform: scale(0.97); }
+  .game-card-emoji { font-size: 52px; line-height: 1; }
+  .game-card-name { font-size: 20px; font-weight: 900; }
+  .game-card-desc { font-size: 14px; color: #64748b; }
+  .game-card-play {
+    margin-top: 8px;
+    background: #2ecc71; color: #fff;
+    font-weight: 800; font-size: 16px;
+    padding: 10px 26px; border-radius: 999px;
+  }
+
+  #game-session-view {
+    display: none;
+    flex-direction: column;
+    max-width: 640px; margin: 0 auto;
+    min-height: 70vh;
+  }
+  .game-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 0 12px 0;
+  }
+  #game-progress { font-size: 17px; font-weight: 800; color: #64748b; }
+  .game-topbar button {
+    border: none; border-radius: 999px;
+    font-weight: 800; font-size: 14px;
+    padding: 8px 16px; cursor: pointer;
+  }
+  #game-skip { background: #e8e2d8; color: #334155; margin-right: 8px; }
+  #game-quit { background: #fee2e2; color: #b91c1c; }
+  #game-stage { flex: 1; display: flex; flex-direction: column; }
+
+  .mwp-word {
+    text-align: center;
+    font-size: clamp(36px, 9vmin, 64px);
+    font-weight: 900; letter-spacing: 2px;
+    color: #0f3460;
+    padding: 12px 0 20px 0;
+    cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+  }
+  .mwp-grid {
+    flex: 1;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    align-content: stretch;
+  }
+  .mwp-tile {
+    display: flex; align-items: center; justify-content: center;
+    border: 4px solid #e2e8f0; border-radius: 20px;
+    background: #fff; cursor: pointer;
+    min-height: 120px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08);
+  }
+  .mwp-tile:active { transform: scale(0.96); }
+  .mwp-tile.mwp-correct { border-color: #2ecc71; background: #eafaf1; }
+  .mwp-emoji { font-size: clamp(48px, 12vmin, 96px); line-height: 1; }
+  .mwp-photo {
+    width: clamp(70px, 16vmin, 130px); height: clamp(70px, 16vmin, 130px);
+    object-fit: cover; border-radius: 14px;
+  }
+
+  #game-score-view {
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px;
+    max-width: 640px; margin: 0 auto;
+    min-height: 60vh; text-align: center;
+  }
+  #game-score-points {
+    font-size: 72px; font-weight: 900; color: #f59e0b;
+  }
+  #game-score-detail { font-size: 18px; color: #64748b; }
+  #game-score-view button {
+    border: none; border-radius: 999px;
+    font-weight: 900; font-size: 18px;
+    padding: 14px 34px; cursor: pointer;
+    margin-top: 8px;
+  }
+  #game-again { background: #2ecc71; color: #fff; }
+  #game-done { background: #e8e2d8; color: #334155; }
+
+  .game-confetti {
+    position: absolute; top: -10px;
+    animation: game-confetti-fall 1.4s ease-in forwards;
+    pointer-events: none; z-index: 7;
+  }
+  @keyframes game-confetti-fall {
+    from { transform: translateY(0) rotate(0deg); opacity: 1; }
+    to   { transform: translateY(75vh) rotate(340deg); opacity: 0; }
+  }
+  .game-wobble { animation: game-wobble-anim 0.4s ease; }
+  @keyframes game-wobble-anim {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px) rotate(-2deg); }
+    75% { transform: translateX(8px) rotate(2deg); }
+  }
+
+  /* ---------- Tap the Order (V2-4) ---------- */
+  .tto-instruction {
+    text-align: center; font-size: 20px; font-weight: 800;
+    color: #0f3460; padding: 8px 0 16px 0; cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+  }
+  .tto-locked, .tto-pool {
+    display: flex; justify-content: center; gap: 12px;
+    padding: 10px 0; flex-wrap: wrap;
+  }
+  .tto-slot {
+    width: 108px; height: 108px;
+    border: 3px dashed #cbd5e1; border-radius: 16px;
+    background: #f1f5f9;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .tto-slot.filled { border-style: solid; border-color: #2ecc71; background: #eafaf1; }
+  .tto-tile {
+    width: 108px; height: 108px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px;
+    border: 4px solid #e2e8f0; border-radius: 16px;
+    background: #fff; cursor: pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08);
+  }
+  .tto-tile:active { transform: scale(0.95); }
+  .tto-tile.tto-used, .tto-tile:disabled { opacity: 0.25; }
+  .tto-emoji, .tto-slot .tto-emoji { font-size: 44px; line-height: 1; }
+  .tto-label, .tto-slot .tto-label { font-size: 15px; font-weight: 800; color: #1e293b; }
+
+  /* ---------- Category Sort (V2-5) ---------- */
+  .cs-buckets { display: flex; gap: 10px; padding-bottom: 8px; }
+  .cs-bucket {
+    flex: 1; min-height: 120px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    border: 3px dashed #cbd5e1; border-radius: 16px;
+    background: #f1f5f9; cursor: pointer; padding: 10px 4px;
+  }
+  .cs-bucket-head { font-size: 16px; font-weight: 900; color: #0f3460; }
+  .cs-bucket-items { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+  .cs-bucket-chip {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: #eafaf1; border: 2px solid #2ecc71; border-radius: 10px;
+  }
+  .cs-bucket-chip .cs-emoji { font-size: 24px; }
+  .cs-bucket-chip .cs-photo { width: 30px; height: 30px; border-radius: 6px; object-fit: cover; }
+  .cs-instruction {
+    text-align: center; font-size: 16px; font-weight: 700;
+    color: #64748b; padding: 10px 0;
+  }
+  .cs-pool {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .cs-tile {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    min-height: 100px;
+    border: 4px solid #e2e8f0; border-radius: 16px;
+    background: #fff; cursor: pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08);
+  }
+  .cs-tile:active { transform: scale(0.95); }
+  .cs-tile.cs-selected { border-color: #f59e0b; background: #fef9c3; }
+  .cs-emoji { font-size: 40px; line-height: 1; }
+  .cs-photo { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; }
+  .cs-label { font-size: 14px; font-weight: 800; color: #1e293b; }
+
+  /* ---------- Rewards (V2-6) ---------- */
+  #rewards-list {
+    max-width: 640px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 16px;
+    padding-top: 8px;
+  }
+  .reward-card {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    border: none; border-radius: 20px;
+    background: #fff; color: #1e293b;
+    padding: 24px 16px; cursor: pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08);
+    text-align: center;
+  }
+  .reward-card.unlocked { border: 4px solid #f59e0b; background: #fffbeb; }
+  .reward-card.unlocked:active { transform: scale(0.97); }
+  .reward-card.locked { opacity: 0.72; cursor: default; }
+  .reward-emoji { font-size: 52px; line-height: 1; }
+  .reward-name { font-size: 20px; font-weight: 900; }
+  .reward-desc { font-size: 14px; color: #64748b; }
+  .reward-cost {
+    margin-top: 8px; font-weight: 800; font-size: 15px;
+    color: #64748b;
+    background: #f1f5f9; border-radius: 999px; padding: 8px 20px;
+  }
+  .reward-cost.unlocked { background: #f59e0b; color: #fff; }
+  #reward-confirm {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,23,42,0.55);
+    z-index: 8;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  #reward-confirm.open { display: flex; }
+  .reward-confirm-card {
+    background: #fff; color: #1e293b;
+    border-radius: 20px; padding: 28px 22px;
+    max-width: 380px; width: 100%;
+    text-align: center;
+  }
+  #reward-confirm-text { font-size: 19px; font-weight: 800; margin: 0 0 18px 0; }
+  .reward-confirm-card button {
+    border: none; border-radius: 999px;
+    font-weight: 900; font-size: 17px;
+    padding: 13px 28px; cursor: pointer; margin: 4px;
+  }
+  #reward-confirm-yes { background: #2ecc71; color: #fff; }
+  #reward-confirm-no { background: #e8e2d8; color: #334155; }
+
   /* ---------- Points badge (V2-2) ---------- */
   #points-badge {
     display: none; /* points.js shows it in child mode */
@@ -1279,6 +1510,41 @@
   <div id="learn-feed"></div>
 </div>
 
+<div id="games-view" class="v2-view" role="region" aria-label="Games">
+  <div id="games-launcher"></div>
+
+  <div id="game-session-view">
+    <div class="game-topbar">
+      <span id="game-progress"></span>
+      <span>
+        <button id="game-skip" aria-label="Skip this round">Skip</button>
+        <button id="game-quit" aria-label="Quit game">✕</button>
+      </span>
+    </div>
+    <div id="game-stage"></div>
+  </div>
+
+  <div id="game-score-view">
+    <div style="font-size:56px">🏆</div>
+    <div id="game-score-points">+0</div>
+    <div id="game-score-detail"></div>
+    <button id="game-again">Play again</button>
+    <button id="game-done">Back to games</button>
+  </div>
+</div>
+
+<div id="rewards-view" class="v2-view" role="region" aria-label="Rewards">
+  <div id="rewards-list"></div>
+</div>
+
+<div id="reward-confirm" role="dialog" aria-modal="true" aria-label="Confirm reward">
+  <div class="reward-confirm-card">
+    <p id="reward-confirm-text"></p>
+    <button id="reward-confirm-yes">Yes, unlock! 🎉</button>
+    <button id="reward-confirm-no">Not yet</button>
+  </div>
+</div>
+
 <div id="content-detail" role="region" aria-label="Video detail">
   <div class="cd-topbar">
     <button id="cd-back" aria-label="Back to Learn">← Back</button>
@@ -1323,6 +1589,11 @@
 <script src="firebase-client.js"></script>
 <script src="nav.js"></script>
 <script src="points.js"></script>
+<script src="games/game-runner.js"></script>
+<script src="games/match-word-picture.js"></script>
+<script src="games/tap-the-order.js"></script>
+<script src="games/category-sort.js"></script>
+<script src="rewards.js"></script>
 <script src="content-browser.js"></script>
 <script src="content-detail.js"></script>
 <script>
