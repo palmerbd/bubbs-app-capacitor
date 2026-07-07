@@ -1027,6 +1027,25 @@
     font-size: 13px; font-weight: 700; color: #1e293b;
     line-height: 1.2;
   }
+
+  /* ---------- Points badge (V2-2) ---------- */
+  #points-badge {
+    display: none; /* points.js shows it in child mode */
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 6px);
+    right: 46px;
+    height: 34px;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+    border-radius: 17px;
+    background: #fbc02d;
+    color: #111;
+    font-weight: 900;
+    font-size: 15px;
+    z-index: 5;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+  }
 </style>
 </head>
 <body>
@@ -1063,6 +1082,7 @@
 </div>
 
 <button id="lock-btn" aria-label="Caregiver mode">⚙</button>
+<span id="points-badge" role="status" aria-live="polite">⭐ 0</span>
 
 <!-- ========== CAREGIVER PANEL ========== -->
 <div id="caregiver-panel" class="panel" role="dialog" aria-modal="true" aria-label="Caregiver settings">
@@ -1302,6 +1322,7 @@
 <script src="pairing.js"></script>
 <script src="firebase-client.js"></script>
 <script src="nav.js"></script>
+<script src="points.js"></script>
 <script src="content-browser.js"></script>
 <script src="content-detail.js"></script>
 <script>
