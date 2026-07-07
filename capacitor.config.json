@@ -5,7 +5,8 @@
   "ios": {
     "scheme": "Bubbs-Talks",
     "contentInset": "always",
-    "limitsNavigationsToAppBoundDomains": false
+    "limitsNavigationsToAppBoundDomains": false,
+    "allowsInlineMediaPlayback": true
   },
   "server": {
     "iosScheme": "bubbs"
