@@ -1,7 +1,7 @@
 {
   "name": "bubbs-talks",
   "version": "1.0.0",
-  "description": "Bubbs-Talks AAC app — Capacitor iOS shell wrapping the HTML AAC prototype.",
+  "description": "Bubbs-Talks AAC app \u2014 Capacitor iOS shell wrapping the HTML AAC prototype.",
   "main": "www/index.html",
   "private": true,
   "scripts": {
@@ -12,7 +12,8 @@
   "dependencies": {
     "@capacitor/core": "^6.1.2",
     "@capacitor/ios": "^6.1.2",
-    "@revenuecat/purchases-capacitor": "^9.2.2"
+    "@revenuecat/purchases-capacitor": "^9.2.2",
+    "@capacitor/app-launcher": "^6.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2"
