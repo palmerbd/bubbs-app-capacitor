@@ -129,6 +129,7 @@
       <button data-section="content" class="active">📚 Content Library</button>
       <button data-section="categories">🏷️ Categories</button>
       <button data-section="points">⭐ Points</button>
+      <button data-section="rewards">🎁 Rewards</button>
     </div>
 
     <!-- ---------- CONTENT ---------- -->
@@ -251,6 +252,45 @@
 
       <div id="points-user-list"></div>
     </div>
+
+    <!-- ---------- REWARDS ---------- -->
+    <div class="section" id="section-rewards">
+      <h2>Rewards</h2>
+      <p class="hint">Rewards the child can redeem with points. The launch target is <strong>hard-coded to YouTube Kids</strong> (<code>youtubekids://</code> with a youtubekids.com fallback) — an App Review safety decision for the 4+ rating. Only the name, description, icon, cost, and active flag are editable.</p>
+
+      <div class="card">
+        <input type="hidden" id="r-id" />
+        <div class="row">
+          <div>
+            <label>Name</label>
+            <input type="text" id="r-name" maxlength="60" placeholder="YouTube Kids — 10 minutes" />
+          </div>
+          <div>
+            <label>Icon (one emoji)</label>
+            <input type="text" id="r-icon" maxlength="4" placeholder="📺" />
+          </div>
+          <div>
+            <label>Cost (points)</label>
+            <input type="number" id="r-cost" value="50" min="1" max="999" />
+          </div>
+          <div>
+            <label>Active</label>
+            <select id="r-active">
+              <option value="true" selected>Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+        </div>
+        <label>Description</label>
+        <input type="text" id="r-desc" maxlength="140" placeholder="Take a fun break with YouTube Kids" />
+        <label>Launches (fixed)</label>
+        <input type="text" value="youtubekids:// (fallback: https://www.youtubekids.com/)" disabled />
+        <button class="btn green" id="r-save">Save reward</button>
+        <button class="btn gray" id="r-cancel" style="display:none">Cancel edit</button>
+      </div>
+
+      <div id="reward-list"></div>
+    </div>
   </div>
 </main>
 
@@ -343,6 +383,7 @@ function subscribe() {
   }, (e) => toast("Content read failed: " + e.message, true)));
 
   subscribePoints();
+  subscribeRewards();
 }
 
 /* ================= URL normalization ================= */
@@ -590,6 +631,87 @@ $("p-grant").addEventListener("click", async () => {
     toast("Grant failed: " + e.message, true);
   }
 });
+
+/* ================= rewards (V2-6) ================= */
+let rewardsAdmin = [];
+
+function subscribeRewards() {
+  unsubs.push(db.collection("rewards").onSnapshot((snap) => {
+    rewardsAdmin = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.cost || 0) - (b.cost || 0));
+    renderRewardList();
+  }, (e) => toast("Rewards read failed: " + e.message, true)));
+}
+
+function fillRewardForm(r) {
+  $("r-id").value = r ? r.id : "";
+  $("r-name").value = r ? r.name || "" : "";
+  $("r-icon").value = r ? r.iconEmoji || "" : "";
+  $("r-cost").value = r ? (r.cost != null ? r.cost : 50) : 50;
+  $("r-active").value = r ? String(r.active !== false) : "true";
+  $("r-desc").value = r ? r.description || "" : "";
+  $("r-cancel").style.display = r ? "" : "none";
+}
+$("r-cancel").addEventListener("click", () => fillRewardForm(null));
+
+$("r-save").addEventListener("click", async () => {
+  const name = $("r-name").value.trim();
+  const cost = Math.round(parseInt($("r-cost").value, 10));
+  if (!name) return toast("Name is required", true);
+  if (!(cost > 0 && cost < 1000)) return toast("Cost must be 1-999", true);
+  const docData = {
+    name: name,
+    description: $("r-desc").value.trim(),
+    iconEmoji: $("r-icon").value.trim() || "🎁",
+    cost: cost,
+    // HARD-CODED launch target — App Review safety for the 4+ rating.
+    actionType: "launch-external",
+    actionValue: "youtubekids://",
+    fallbackUrl: "https://www.youtubekids.com/",
+    active: $("r-active").value === "true",
+    updatedAt: FV.serverTimestamp(),
+  };
+  try {
+    const id = $("r-id").value;
+    if (id) {
+      await db.collection("rewards").doc(id).set(docData, { merge: true });
+    } else {
+      docData.createdAt = FV.serverTimestamp();
+      await db.collection("rewards").add(docData);
+    }
+    fillRewardForm(null);
+    toast("Saved ✓");
+  } catch (e) {
+    toast("Save failed: " + e.message, true);
+  }
+});
+
+function renderRewardList() {
+  const host = $("reward-list");
+  host.innerHTML = "";
+  rewardsAdmin.forEach((r) => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+    row.innerHTML =
+      '<div class="meta"><div class="t">' + esc(r.iconEmoji || "🎁") + " " + esc(r.name) + " — ⭐ " + (r.cost || 0) + "</div>" +
+      '<div class="s">' + esc(r.description || "") + "</div>" +
+      '<div><span class="pill ' + (r.active !== false ? "on" : "off") + '">' + (r.active !== false ? "active" : "inactive") + "</span>" +
+      '<span class="pill">youtubekids://</span></div></div>';
+    const edit = document.createElement("button");
+    edit.className = "btn small"; edit.textContent = "Edit";
+    edit.addEventListener("click", () => fillRewardForm(r));
+    const del = document.createElement("button");
+    del.className = "btn small red"; del.textContent = "Delete";
+    del.addEventListener("click", async () => {
+      if (!confirm('Delete reward "' + r.name + '"?')) return;
+      try { await db.collection("rewards").doc(r.id).delete(); toast("Deleted"); }
+      catch (e) { toast("Delete failed: " + e.message, true); }
+    });
+    row.append(edit, del);
+    host.appendChild(row);
+  });
+  if (!rewardsAdmin.length) host.innerHTML = '<p class="hint">No rewards yet. The classic starter: "YouTube Kids — 10 minutes" at 50 points.</p>';
+}
 
 function renderCategoryList() {
   const host = $("category-list");
