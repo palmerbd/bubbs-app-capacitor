@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bubbs-Talks Admin</title>
+<!--
+  Bubbs-Talks admin panel — V2 (batch V2-1: Content Library + Categories).
+
+  Single-file web admin. NOT shipped inside the iOS app (lives outside
+  www/, so Capacitor never bundles it). Open directly in Chrome on any
+  computer, sign in with the admin email/password, and author the
+  content that appears in the app's Learn tab in real time.
+
+  Sections arrive with their app batches:
+    V2-1  Content Library + Categories   (this file)
+    V2-2  Points (grant/inspect)         (added later)
+    V2-6  Rewards                        (added later)
+
+  Security: writes are gated by Firestore rules — only UIDs listed in
+  /admin-users/{uid} can write /content, /content-categories, /rewards.
+-->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #111827; color: #f3f4f6;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px; background: #0f3460;
+    position: sticky; top: 0; z-index: 5;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  header .who { font-size: 12px; color: #cbd5e1; }
+  header button {
+    background: #e94560; border: none; color: #fff;
+    padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer;
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 20px; }
+  h2 { font-size: 20px; margin: 26px 0 10px 0; }
+  .hint { color: #9ca3af; font-size: 13px; margin: 0 0 14px 0; }
+  .card {
+    background: #1f2937; border: 1px solid #374151;
+    border-radius: 12px; padding: 16px; margin-bottom: 12px;
+  }
+  label { display: block; font-size: 12px; color: #9ca3af; margin: 10px 0 4px; }
+  input[type=text], input[type=url], input[type=number], input[type=email],
+  input[type=password], textarea, select {
+    width: 100%; padding: 10px; border-radius: 8px;
+    border: 1px solid #4b5563; background: #111827; color: #f3f4f6;
+    font-size: 14px;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  .btn {
+    background: #2563eb; color: #fff; border: none;
+    padding: 10px 18px; border-radius: 8px;
+    font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 12px;
+  }
+  .btn.green { background: #059669; }
+  .btn.gray { background: #4b5563; }
+  .btn.red { background: #dc2626; }
+  .btn.small { padding: 6px 12px; font-size: 12px; margin: 0; }
+  .list-item {
+    display: flex; align-items: center; gap: 12px;
+    background: #1f2937; border: 1px solid #374151;
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 8px;
+  }
+  .list-item img { width: 88px; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; }
+  .list-item .meta { flex: 1; min-width: 0; }
+  .list-item .meta .t { font-weight: 700; font-size: 14px; }
+  .list-item .meta .s { font-size: 12px; color: #9ca3af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #374151; margin-right: 4px; }
+  .pill.on { background: #059669; }
+  .pill.off { background: #92400e; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .checks label {
+    display: flex; align-items: center; gap: 5px; margin: 0;
+    background: #111827; border: 1px solid #4b5563; border-radius: 999px;
+    padding: 6px 12px; font-size: 13px; color: #e5e7eb; cursor: pointer;
+  }
+  #login-view { max-width: 380px; margin: 80px auto; }
+  #status {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: #059669; color: #fff; padding: 10px 22px; border-radius: 999px;
+    font-weight: 700; display: none; z-index: 10;
+  }
+  #status.err { background: #dc2626; }
+  .tabs { display: flex; gap: 8px; margin: 18px 0; }
+  .tabs button {
+    background: #1f2937; border: 1px solid #374151; color: #e5e7eb;
+    padding: 10px 18px; border-radius: 999px; font-weight: 700; cursor: pointer;
+  }
+  .tabs button.active { background: #2563eb; border-color: #2563eb; }
+  .section { display: none; }
+  .section.active { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🗨️ Bubbs-Talks Admin</h1>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="who" id="who"></span>
+    <button id="signout-btn" style="display:none">Sign out</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ LOGIN ============ -->
+  <div id="login-view">
+    <div class="card">
+      <h2 style="margin-top:0">Sign in</h2>
+      <p class="hint">Admin accounts only. Writes are enforced by Firestore security rules.</p>
+      <label>Email</label>
+      <input type="email" id="login-email" autocomplete="username" />
+      <label>Password</label>
+      <input type="password" id="login-pass" autocomplete="current-password" />
+      <button class="btn" id="login-btn">Sign in</button>
+      <p class="hint" id="login-err" style="color:#f87171"></p>
+    </div>
+  </div>
+
+  <!-- ============ ADMIN ============ -->
+  <div id="admin-view" style="display:none">
+    <div class="tabs">
+      <button data-section="content" class="active">📚 Content Library</button>
+      <button data-section="categories">🏷️ Categories</button>
+    </div>
+
+    <!-- ---------- CONTENT ---------- -->
+    <div class="section active" id="section-content">
+      <h2>Content Library</h2>
+      <p class="hint">Items appear in the app's Learn tab in real time when <strong>Published</strong> is on. Higher "order" = higher in the feed.</p>
+
+      <div class="card" id="content-form">
+        <input type="hidden" id="c-id" />
+        <label>Title</label>
+        <input type="text" id="c-title" maxlength="120" placeholder="Learning the primary colors" />
+        <label>Short description</label>
+        <textarea id="c-desc" maxlength="600" placeholder="A short introduction to red, blue, and yellow…"></textarea>
+        <label>Video URL (YouTube / Vimeo / direct .mp4 — paste any normal link, it's normalized on save)</label>
+        <input type="url" id="c-url" placeholder="https://www.youtube.com/watch?v=…" />
+        <div class="row">
+          <div>
+            <label>Provider</label>
+            <select id="c-provider">
+              <option value="auto" selected>Auto-detect from URL</option>
+              <option value="youtube">YouTube</option>
+              <option value="vimeo">Vimeo</option>
+              <option value="mp4">MP4</option>
+            </select>
+          </div>
+          <div>
+            <label>Duration (m:ss or seconds)</label>
+            <input type="text" id="c-duration" placeholder="3:42" />
+          </div>
+          <div>
+            <label>Order (higher = first)</label>
+            <input type="number" id="c-order" value="100" />
+          </div>
+        </div>
+        <label>Thumbnail URL (auto-filled for YouTube if left blank)</label>
+        <input type="url" id="c-thumb" placeholder="https://…/thumb.jpg" />
+        <div class="row">
+          <div>
+            <label>Age min</label>
+            <input type="number" id="c-agemin" value="4" min="1" max="18" />
+          </div>
+          <div>
+            <label>Age max</label>
+            <input type="number" id="c-agemax" value="8" min="1" max="18" />
+          </div>
+          <div>
+            <label>Published</label>
+            <select id="c-published">
+              <option value="true">Yes — visible in app</option>
+              <option value="false" selected>No — draft</option>
+            </select>
+          </div>
+        </div>
+        <label>Categories</label>
+        <div class="checks" id="c-cats"></div>
+        <button class="btn green" id="c-save">Save content item</button>
+        <button class="btn gray" id="c-cancel" style="display:none">Cancel edit</button>
+      </div>
+
+      <div id="content-list"></div>
+    </div>
+
+    <!-- ---------- CATEGORIES ---------- -->
+    <div class="section" id="section-categories">
+      <h2>Categories</h2>
+      <p class="hint">Shown as filter chips above the Learn feed. Icon = one emoji (kids identify by icon before text).</p>
+
+      <div class="card">
+        <input type="hidden" id="k-id" />
+        <div class="row">
+          <div>
+            <label>Label</label>
+            <input type="text" id="k-label" maxlength="24" placeholder="Colors" />
+          </div>
+          <div>
+            <label>Icon (one emoji)</label>
+            <input type="text" id="k-icon" maxlength="4" placeholder="🎨" />
+          </div>
+          <div>
+            <label>Order (higher = first)</label>
+            <input type="number" id="k-order" value="10" />
+          </div>
+          <div>
+            <label>Active</label>
+            <select id="k-active">
+              <option value="true" selected>Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn green" id="k-save">Save category</button>
+        <button class="btn gray" id="k-cancel" style="display:none">Cancel edit</button>
+      </div>
+
+      <div id="category-list"></div>
+    </div>
+  </div>
+</main>
+
+<div id="status"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+"use strict";
+
+/* Same public web config that ships in the app (www/config.js). */
+firebase.initializeApp({
+  apiKey: "AIzaSyB1dLZnpQDx6lHFTCDi_7Jlt_mQ3etWOMY",
+  authDomain: "bubbs-app-prod.firebaseapp.com",
+  projectId: "bubbs-app-prod",
+  storageBucket: "bubbs-app-prod.firebasestorage.app",
+  messagingSenderId: "103336467618",
+  appId: "1:103336467618:web:ac218dcbf62fc08949cbfb",
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+const FV = firebase.firestore.FieldValue;
+
+const $ = (id) => document.getElementById(id);
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+let statusTimer = null;
+function toast(msg, isErr) {
+  const el = $("status");
+  el.textContent = msg;
+  el.className = isErr ? "err" : "";
+  el.style.display = "block";
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => (el.style.display = "none"), 3200);
+}
+
+/* ================= auth ================= */
+$("login-btn").addEventListener("click", async () => {
+  $("login-err").textContent = "";
+  try {
+    await auth.signInWithEmailAndPassword($("login-email").value.trim(), $("login-pass").value);
+  } catch (e) {
+    $("login-err").textContent = e.message || "Sign-in failed";
+  }
+});
+$("login-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") $("login-btn").click(); });
+$("signout-btn").addEventListener("click", () => auth.signOut());
+
+let unsubs = [];
+auth.onAuthStateChanged((user) => {
+  const authed = !!user;
+  $("login-view").style.display = authed ? "none" : "";
+  $("admin-view").style.display = authed ? "" : "none";
+  $("signout-btn").style.display = authed ? "" : "none";
+  $("who").textContent = authed ? user.email + " · uid " + user.uid : "";
+  unsubs.forEach((u) => u && u());
+  unsubs = [];
+  if (authed) subscribe();
+});
+
+/* ================= tabs ================= */
+document.querySelectorAll(".tabs button").forEach((b) => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((x) => x.classList.remove("active"));
+    document.querySelectorAll(".section").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active");
+    $("section-" + b.dataset.section).classList.add("active");
+  });
+});
+
+/* ================= data ================= */
+let categories = [];
+let content = [];
+
+function subscribe() {
+  unsubs.push(db.collection("content-categories").onSnapshot((snap) => {
+    categories = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.orderHint || 0) - (a.orderHint || 0));
+    renderCategoryList();
+    renderCatChecks();
+  }, (e) => toast("Categories read failed: " + e.message, true)));
+
+  unsubs.push(db.collection("content").onSnapshot((snap) => {
+    content = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.orderHint || 0) - (a.orderHint || 0));
+    renderContentList();
+  }, (e) => toast("Content read failed: " + e.message, true)));
+}
+
+/* ================= URL normalization ================= */
+function parseVideo(rawUrl, providerChoice) {
+  const url = String(rawUrl || "").trim();
+  let provider = providerChoice === "auto" ? null : providerChoice;
+
+  // YouTube id extraction
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,20})/);
+  if ((!provider || provider === "youtube") && yt) {
+    return {
+      provider: "youtube",
+      videoUrl: "https://www.youtube.com/embed/" + yt[1],
+      autoThumb: "https://i.ytimg.com/vi/" + yt[1] + "/hqdefault.jpg",
+    };
+  }
+  const vm = url.match(/(?:vimeo\.com\/(?:video\/)?|player\.vimeo\.com\/video\/)(\d{6,12})/);
+  if ((!provider || provider === "vimeo") && vm) {
+    return { provider: "vimeo", videoUrl: "https://player.vimeo.com/video/" + vm[1], autoThumb: "" };
+  }
+  if (provider === "mp4" || /\.mp4(\?|$)/i.test(url)) {
+    return { provider: "mp4", videoUrl: url, autoThumb: "" };
+  }
+  if (provider) return { provider: provider, videoUrl: url, autoThumb: "" };
+  return null;
+}
+
+function parseDuration(s) {
+  const t = String(s || "").trim();
+  if (!t) return 0;
+  if (/^\d+$/.test(t)) return parseInt(t, 10);
+  const m = t.match(/^(\d+):([0-5]?\d)$/);
+  if (m) return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  return 0;
+}
+
+/* ================= content CRUD ================= */
+function renderCatChecks() {
+  const host = $("c-cats");
+  const checked = new Set(
+    Array.from(host.querySelectorAll("input:checked")).map((i) => i.value)
+  );
+  host.innerHTML = "";
+  categories.forEach((c) => {
+    const l = document.createElement("label");
+    l.innerHTML = '<input type="checkbox" value="' + esc(c.id) + '"' +
+      (checked.has(c.id) ? " checked" : "") + " /> " + esc(c.icon || "") + " " + esc(c.label);
+    host.appendChild(l);
+  });
+  if (!categories.length) host.innerHTML = '<span class="hint">No categories yet — create some in the Categories tab.</span>';
+}
+
+function fillContentForm(item) {
+  $("c-id").value = item ? item.id : "";
+  $("c-title").value = item ? item.title || "" : "";
+  $("c-desc").value = item ? item.shortDescription || "" : "";
+  $("c-url").value = item ? item.videoUrl || "" : "";
+  $("c-provider").value = item ? item.videoProvider || "auto" : "auto";
+  $("c-duration").value = item && item.durationSeconds ? String(item.durationSeconds) : "";
+  $("c-order").value = item ? (item.orderHint != null ? item.orderHint : 100) : 100;
+  $("c-thumb").value = item ? item.thumbnailUrl || "" : "";
+  $("c-agemin").value = item && item.ageRange ? item.ageRange.min : 4;
+  $("c-agemax").value = item && item.ageRange ? item.ageRange.max : 8;
+  $("c-published").value = item ? String(!!item.published) : "false";
+  $("c-cats").querySelectorAll("input").forEach((i) => {
+    i.checked = !!(item && Array.isArray(item.categoryIds) && item.categoryIds.indexOf(i.value) !== -1);
+  });
+  $("c-cancel").style.display = item ? "" : "none";
+  if (item) window.scrollTo({ top: 0 });
+}
+
+$("c-cancel").addEventListener("click", () => fillContentForm(null));
+
+$("c-save").addEventListener("click", async () => {
+  const title = $("c-title").value.trim();
+  if (!title) return toast("Title is required", true);
+  const parsed = parseVideo($("c-url").value, $("c-provider").value);
+  if (!parsed) return toast("Couldn't understand that video URL", true);
+
+  const doc = {
+    title: title,
+    shortDescription: $("c-desc").value.trim(),
+    videoUrl: parsed.videoUrl,
+    videoProvider: parsed.provider,
+    thumbnailUrl: $("c-thumb").value.trim() || parsed.autoThumb || "",
+    durationSeconds: parseDuration($("c-duration").value),
+    categoryIds: Array.from($("c-cats").querySelectorAll("input:checked")).map((i) => i.value),
+    ageRange: {
+      min: parseInt($("c-agemin").value, 10) || 4,
+      max: parseInt($("c-agemax").value, 10) || 8,
+    },
+    published: $("c-published").value === "true",
+    orderHint: parseInt($("c-order").value, 10) || 0,
+    updatedAt: FV.serverTimestamp(),
+  };
+  try {
+    const id = $("c-id").value;
+    if (id) {
+      await db.collection("content").doc(id).set(doc, { merge: true });
+    } else {
+      doc.createdAt = FV.serverTimestamp();
+      await db.collection("content").add(doc);
+    }
+    fillContentForm(null);
+    toast("Saved ✓");
+  } catch (e) {
+    toast("Save failed: " + e.message, true);
+  }
+});
+
+function renderContentList() {
+  const host = $("content-list");
+  host.innerHTML = "";
+  content.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+    row.innerHTML =
+      (item.thumbnailUrl ? '<img src="' + esc(item.thumbnailUrl) + '" alt="" />' : "") +
+      '<div class="meta"><div class="t">' + esc(item.title) + "</div>" +
+      '<div class="s">' + esc(item.videoProvider) + " · order " + (item.orderHint || 0) + " · " + esc(item.shortDescription || "") + "</div>" +
+      "<div>" +
+      '<span class="pill ' + (item.published ? "on" : "off") + '">' + (item.published ? "published" : "draft") + "</span>" +
+      (item.categoryIds || []).map((c) => {
+        const cat = categories.find((x) => x.id === c);
+        return '<span class="pill">' + esc(cat ? cat.label : c) + "</span>";
+      }).join("") +
+      "</div></div>";
+    const edit = document.createElement("button");
+    edit.className = "btn small"; edit.textContent = "Edit";
+    edit.addEventListener("click", () => fillContentForm(item));
+    const del = document.createElement("button");
+    del.className = "btn small red"; del.textContent = "Delete";
+    del.addEventListener("click", async () => {
+      if (!confirm('Delete "' + item.title + '"?')) return;
+      try { await db.collection("content").doc(item.id).delete(); toast("Deleted"); }
+      catch (e) { toast("Delete failed: " + e.message, true); }
+    });
+    row.append(edit, del);
+    host.appendChild(row);
+  });
+  if (!content.length) host.innerHTML = '<p class="hint">No content yet. Add your first item above.</p>';
+}
+
+/* ================= category CRUD ================= */
+function slugify(label) {
+  return "cat-" + label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+}
+
+function fillCatForm(cat) {
+  $("k-id").value = cat ? cat.id : "";
+  $("k-label").value = cat ? cat.label || "" : "";
+  $("k-icon").value = cat ? cat.icon || "" : "";
+  $("k-order").value = cat ? (cat.orderHint != null ? cat.orderHint : 10) : 10;
+  $("k-active").value = cat ? String(cat.active !== false) : "true";
+  $("k-cancel").style.display = cat ? "" : "none";
+}
+$("k-cancel").addEventListener("click", () => fillCatForm(null));
+
+$("k-save").addEventListener("click", async () => {
+  const label = $("k-label").value.trim();
+  if (!label) return toast("Label is required", true);
+  const id = $("k-id").value || slugify(label);
+  const doc = {
+    id: id,
+    label: label,
+    icon: $("k-icon").value.trim(),
+    orderHint: parseInt($("k-order").value, 10) || 0,
+    active: $("k-active").value === "true",
+  };
+  try {
+    await db.collection("content-categories").doc(id).set(doc, { merge: true });
+    fillCatForm(null);
+    toast("Saved ✓");
+  } catch (e) {
+    toast("Save failed: " + e.message, true);
+  }
+});
+
+function renderCategoryList() {
+  const host = $("category-list");
+  host.innerHTML = "";
+  categories.forEach((cat) => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+    row.innerHTML =
+      '<div class="meta"><div class="t">' + esc(cat.icon || "") + " " + esc(cat.label) + "</div>" +
+      '<div class="s">' + esc(cat.id) + " · order " + (cat.orderHint || 0) + "</div>" +
+      '<div><span class="pill ' + (cat.active !== false ? "on" : "off") + '">' +
+      (cat.active !== false ? "active" : "inactive") + "</span></div></div>";
+    const edit = document.createElement("button");
+    edit.className = "btn small"; edit.textContent = "Edit";
+    edit.addEventListener("click", () => fillCatForm(cat));
+    const del = document.createElement("button");
+    del.className = "btn small red"; del.textContent = "Delete";
+    del.addEventListener("click", async () => {
+      if (!confirm('Delete category "' + cat.label + '"?')) return;
+      try { await db.collection("content-categories").doc(cat.id).delete(); toast("Deleted"); }
+      catch (e) { toast("Delete failed: " + e.message, true); }
+    });
+    row.append(edit, del);
+    host.appendChild(row);
+  });
+  if (!categories.length) host.innerHTML = '<p class="hint">No categories yet. Add "Colors", "Numbers", etc. above.</p>';
+}
+</script>
+</body>
+</html>
